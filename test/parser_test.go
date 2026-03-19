@@ -53,6 +53,106 @@ func TestParseBasic(t *testing.T) {
 	}
 }
 
+func TestParseYaml(t *testing.T) {
+	tmp := t.TempDir()
+	samplePath := filepath.Join(tmp, "sample.yml")
+	sample := `plugin:
+  - dart
+  - go
+
+paths:
+  - name: dart
+    config:
+      plugin:
+        - dart
+      filepath: "./lib/models"
+      suffix: _dart
+      format: snake
+  - name: go
+    config:
+      plugin:
+        - go
+      filepath: "./internal/models"
+      format: pascal
+
+schemas:
+  - name: usuario
+    fields:
+      id: "int"
+      nombre: "string"
+      email: "string"
+      perfil: "object:profile"
+  - name: profile
+    fields:
+      bio: "string"
+      avatar: "string"
+`
+	if err := os.WriteFile(samplePath, []byte(sample), 0644); err != nil {
+		t.Fatalf("write sample yml: %v", err)
+	}
+
+	mrr, err := parser.ParseFile(samplePath)
+	if err != nil {
+		t.Fatalf("parse yml failed: %v", err)
+	}
+	if len(mrr.Plugins) != 2 || len(mrr.Paths) != 2 || len(mrr.Schemas) != 2 {
+		t.Fatalf("unexpected parse counts for yaml: plugins=%d paths=%d schemas=%d", len(mrr.Plugins), len(mrr.Paths), len(mrr.Schemas))
+	}
+	if _, ok := mrr.Schemas["usuario"]; !ok {
+		t.Fatal("usuario schema missing yaml")
+	}
+	if _, ok := mrr.Schemas["profile"]; !ok {
+		t.Fatal("profile schema missing yaml")
+	}
+}
+
+func TestParseYamlInclude(t *testing.T) {
+	tmp := t.TempDir()
+	commonPath := filepath.Join(tmp, "common.yml")
+	common := `schemas:
+  - name: direccion
+    fields:
+      calle: "string"
+      ciudad: "string"
+`
+	if err := os.WriteFile(commonPath, []byte(common), 0644); err != nil {
+		t.Fatalf("write common yaml: %v", err)
+	}
+
+	samplePath := filepath.Join(tmp, "sample.yml")
+	sample := `plugin:
+  - go
+
+paths:
+  - name: go
+    config:
+      plugin:
+        - go
+      filepath: "./internal/models"
+      format: pascal
+
+schemas:
+  - name: usuario
+    fields:
+      id: "int"
+  - include: ["common.yml"]
+`
+	if err := os.WriteFile(samplePath, []byte(sample), 0644); err != nil {
+		t.Fatalf("write sample yaml include: %v", err)
+	}
+
+	mrr, err := parser.ParseFile(samplePath)
+	if err != nil {
+		t.Fatalf("parse yaml include failed: %v", err)
+	}
+	if _, ok := mrr.Schemas["usuario"]; !ok {
+		t.Fatal("usuario schema missing yaml include")
+	}
+	if _, ok := mrr.Schemas["direccion"]; !ok {
+		t.Fatal("direccion schema missing yaml include")
+	}
+}
+
 func TestParseSchemaOnlyImport(t *testing.T) {
 	tmp := t.TempDir()
 	commonPath := filepath.Join(tmp, "common.mrr")

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/mirror/mirror/internal/model"
 	"github.com/mirror/mirror/internal/plugin"
@@ -33,13 +34,16 @@ func Generate(mrr *model.MRRFile, reg *plugin.Registry, baseOutput string, verbo
 			if !ok {
 				return res, fmt.Errorf("plugin %q not found", pluginName)
 			}
+			verbosePrintln(verbose, "[verbose] Plugin used: %s\n", reflect.TypeOf(plg).Elem().Name())
 
 			cfg := model.OutputConfig{Path: outputDir, Suffix: p.Suffix, Format: p.Format}
+			verbosePrintln(verbose, "[verbose] Config %s\n", cfg)
 			files, err := plg.Generate(allSchemas, cfg)
 			if err != nil {
 				res.Errors = append(res.Errors, err)
 				continue
 			}
+			verbosePrintln(verbose, "[verbose] Generated %d files\n", len(files))
 
 			for _, file := range files {
 				target := filepath.Join(outputDir, file.Path)
@@ -52,9 +56,7 @@ func Generate(mrr *model.MRRFile, reg *plugin.Registry, baseOutput string, verbo
 					continue
 				}
 				res.WrittenFiles = append(res.WrittenFiles, target)
-				if verbose {
-					fmt.Printf("wrote %s\n", target)
-				}
+				verbosePrintln(verbose, "[verbose] Wrote %s\n", target)
 			}
 		}
 	}
@@ -63,4 +65,10 @@ func Generate(mrr *model.MRRFile, reg *plugin.Registry, baseOutput string, verbo
 		return res, fmt.Errorf("generation completed with %d errors", len(res.Errors))
 	}
 	return res, nil
+}
+
+func verbosePrintln(verbose bool, format string, args ...any) {
+	if verbose {
+		fmt.Printf(format, args...)
+	}
 }

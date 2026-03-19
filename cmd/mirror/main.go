@@ -24,7 +24,7 @@ func main() {
 
 	args := flag.Args()
 	if len(args) != 1 {
-		fmt.Println("usage: mirror [options] <archivo.mrr>")
+		fmt.Println("usage: mirror [options] <archivo.mrr|archivo.yml>")
 		os.Exit(1)
 	}
 
@@ -70,6 +70,25 @@ func runOnce(mrrPath, baseOutput, pluginsDir string, verbose bool) error {
 	mrr, err := parser.ParseFile(mrrPath)
 	if err != nil {
 		return err
+	}
+
+	if verbose {
+		fmt.Println("[verbose] Parsed config:")
+		fmt.Println(" [verbose] File:", mrrPath)
+		fmt.Println(" [verbose] Plugins:", strings.Join(mrr.Plugins, ", "))
+		fmt.Println(" [verbose] Paths:")
+		for _, p := range mrr.Paths {
+			// fmt.Printf(" [verbose]   - ext=%q, output=%q, suffix=%q, format=%q, plugins=%v\n", p.Ext, p.OutputDir, p.Suffix, p.Format, p.Plugins)
+			fmt.Printf(" [verbose]   - %s\n", p)
+		}
+		fmt.Println(" [verbose] Schemas:")
+		for _, s := range mrr.Schemas {
+			fmt.Printf(" [verbose]   - %s\n", s.Name)
+			for _, f := range s.Fields {
+				fmt.Printf(" [verbose]       * %s: %s\n", f.Name, f.Type)
+			}
+		}
+		fmt.Println(" [verbose] Imports:", strings.Join(mrr.Imports, ", "))
 	}
 
 	if baseOutput == "" {

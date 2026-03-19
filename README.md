@@ -11,7 +11,7 @@ go install github.com/mirror/mirror/cmd/mirror@latest
 ## uso
 
 ```sh
-mirror [--watch] [--verbose] [--plugins-dir dir] [--output-dir dir] archivo.mrr
+mirror [--watch] [--verbose] [--plugins-dir dir] [--output-dir dir] archivo.mrr|archivo.yml
 ```
 
 ## formato .mrr
