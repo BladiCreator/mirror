@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mirror/mirror/internal/languages/internal"
+	"github.com/mirror/mirror/internal/languages/builtin"
 	"github.com/mirror/mirror/internal/model"
 )
 
 func TestGenerationWithImports(t *testing.T) {
-	langs := internal.InternalLanguage()
+	langs := builtin.InternalLanguage()
 	
 	schemas := []*model.Schema{
 		{
@@ -30,10 +30,10 @@ func TestGenerationWithImports(t *testing.T) {
 	cfg := model.OutputConfig{Filepath: "./models", Format: "pascal"}
 
 	// Test Go generation
-	var goPlg *internal.GoLanguage
+	var goPlg *builtin.GoLanguage
 	for _, l := range langs {
 		if l.Name() == "go" {
-			goPlg = l.(*internal.GoLanguage)
+			goPlg = l.(*builtin.GoLanguage)
 		}
 	}
 	
@@ -47,10 +47,10 @@ func TestGenerationWithImports(t *testing.T) {
 	}
 
 	// Test Dart generation
-	var dartPlg *internal.DartLanguage
+	var dartPlg *builtin.DartLanguage
 	for _, l := range langs {
 		if l.Name() == "dart" {
-			dartPlg = l.(*internal.DartLanguage)
+			dartPlg = l.(*builtin.DartLanguage)
 		}
 	}
 	

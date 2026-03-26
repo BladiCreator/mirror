@@ -17,6 +17,7 @@ type Language interface {
 	Generate(schemas []*model.Schema, cfg model.OutputConfig) ([]model.GeneratedFile, error)
 	ResolveType(typeStr string) string
 	Analyzer() Analyzer
+	Template() (string, error)
 }
 
 // Analyzer defines how to detect and extract schemas from source files.
@@ -74,5 +75,9 @@ func (p *ExternalLanguage) ResolveType(t string) string {
 
 func (p *ExternalLanguage) Analyzer() Analyzer {
 	return nil
+}
+
+func (p *ExternalLanguage) Template() (string, error) {
+	return "Template showing for external plugins is not yet implemented", nil
 }
 

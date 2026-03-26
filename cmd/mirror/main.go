@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -16,49 +17,84 @@ import (
 	"github.com/mirror/mirror/internal/watcher"
 )
 
+type Command struct {
+	Names   []string
+	Summary string
+	Action  func(args []string)
+}
+
+var commandRegistry = make(map[string]Command)
+var commandOrder [][]string
+
+func registerCommand(summary string, action func(args []string), names ...string) {
+	cmd := Command{Names: names, Summary: summary, Action: action}
+	for _, name := range names {
+		commandRegistry[name] = cmd
+	}
+	commandOrder = append(commandOrder, names)
+}
+
+func init() {
+	registerCommand("Initialize a new mirror.yml by analyzing existing models", runInit, "init")
+	registerCommand("List available plugins or internal languages", runLs, "ls", "list-languages", "list-lang", "list-plugins")
+	registerCommand("Generate code from a mirror.yml file (default command)", runGenerate, "generate")
+	registerCommand("Show the default template used for a specific language", runShowTemplate, "show-template", "st")
+	registerCommand("Manage language plugins (install, uninstall, etc.)", runLangManagement, "lang", "language")
+	// registerCommand("Login to the Mirror registry", func(args []string) { fmt.Println("login: Not fully implemented in this version.") }, "login")
+	registerCommand("Show this help message", func(args []string) { printHelp() }, "help", "--help", "-h")
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		runGenerate([]string{}) // default to generate
 		return
 	}
 
-	cmd := os.Args[1]
-	switch cmd {
-	case "init":
-		runInit()
-	case "generate":
-		runGenerate(os.Args[2:])
-	case "list-languages", "list-lang":
-		runListLang()
-	case "show-template":
-		runShowTemplate(os.Args[2:])
-	case "lang", "language":
-		runLangManagement(os.Args[2:])
-	case "login":
-		fmt.Println("login: Not fully implemented in this version.")
-	default:
-		// if it's a file, assume default command is generate
-		if cmd == "--init" {
-			runInit()
-			return
-		}
-		if strings.HasSuffix(cmd, ".yml") || strings.HasSuffix(cmd, ".yaml") || cmd == "--watch" || cmd == "--verbose" {
-			runGenerate(os.Args[1:])
-		} else {
-			fmt.Printf("Unknown command: %s\n", cmd)
-			os.Exit(1)
-		}
+	cmdName := os.Args[1]
+	if cmd, ok := commandRegistry[cmdName]; ok {
+		cmd.Action(os.Args[2:])
+		return
 	}
+
+	// Default behavior for .yml files or flags
+	if strings.HasSuffix(cmdName, ".yml") || strings.HasSuffix(cmdName, ".yaml") ||
+		cmdName == "--watch" || cmdName == "--verbose" {
+		runGenerate(os.Args[1:])
+		return
+	}
+
+	fmt.Printf("Unknown command: %s\n", cmdName)
+	printHelp()
+	os.Exit(1)
 }
 
-func runInit() {
+func printHelp() {
+	fmt.Println("Mirror - A universal code generator for models")
+	fmt.Println("\nUsage:")
+	fmt.Println("  mirror [command] [options]")
+	fmt.Println("\nAvailable Commands:")
+	for _, names := range commandOrder {
+		cmd := commandRegistry[names[0]]
+		fmt.Printf("  %-25s %s\n", strings.Join(names, ", "), cmd.Summary)
+	}
+	fmt.Println("\nGeneration Options:")
+	fmt.Println("  --watch              Monitor mirror.yml and included files for changes")
+	fmt.Println("  --verbose            Show detailed generation logs")
+	fmt.Println("  --lang-dir <path>    Specify a directory to search for external plugins")
+	fmt.Println("\nExamples:")
+	fmt.Println("  mirror init")
+	fmt.Println("  mirror generate mirror.yml --watch")
+	fmt.Println("  mirror mirror.yml")
+}
+
+func runInit(args []string) {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("Initializing mirror project...")
-	
+
 	// Registry provides analyzers
 	reg := languages.NewRegistry("")
 	analyzers := reg.Analyzers()
-	
+
 	fmt.Println("Which directory should I analyze to find your models? (default: '.')")
 	var scanDir string
 	if scanner.Scan() {
@@ -67,7 +103,7 @@ func runInit() {
 	if scanDir == "" {
 		scanDir = "."
 	}
-	
+
 	absScanDir, _ := filepath.Abs(scanDir)
 	detected, err := parser.DetectPredominantLanguage(absScanDir, analyzers)
 	if err != nil {
@@ -75,7 +111,7 @@ func runInit() {
 		os.Exit(1)
 	}
 	fmt.Printf("Predominant language detected: %s\n", detected)
-	
+
 	var availableLangs []string
 	for l := range analyzers {
 		availableLangs = append(availableLangs, l)
@@ -145,7 +181,7 @@ func runInit() {
 
 func runGenerate(args []string) {
 	fs := flag.NewFlagSet("generate", flag.ExitOnError)
-	watchMode := fs.Bool("watch", false, "watch .yml and .mrr files and regenerate")
+	watchMode := fs.Bool("watch", false, "watch .yml files and regenerate")
 	verbose := fs.Bool("verbose", false, "verbose output")
 	langDir := fs.String("lang-dir", "", "directory to find external generators")
 	fs.Parse(args)
@@ -216,32 +252,73 @@ func doGenerate(mrrPath, baseOutput, langDir string, verbose bool) error {
 	return nil
 }
 
-func runListLang() {
-	// Normally we would list all items in the internal registry and the ~/.mirror/languages
+func runLs(args []string) {
+	fs := flag.NewFlagSet("ls", flag.ExitOnError)
+	langDir := fs.String("lang-dir", "", "directory to find external generators")
+	fs.Parse(args)
+
+	positional := fs.Args()
+	subCmd := ""
+	if len(positional) > 0 {
+		subCmd = positional[0]
+	}
+
+	reg := languages.NewRegistry(*langDir)
+
+	switch subCmd {
+	case "plugin", "plugins", "languages", "lang":
+		printAll(reg)
+	default:
+		printAll(reg)
+		fmt.Println("\n(use 'mirror ls plugin' to see this list again)")
+	}
+}
+
+func printAll(reg *languages.Registry) {
 	fmt.Println("Available languages (internal):")
-	fmt.Println("  dart")
-	fmt.Println("  go")
-	fmt.Println("(external plugins are dynamically resolved via PATH or --lang-dir)")
+	langs := reg.ListInternal()
+	sort.Strings(langs)
+	for _, l := range langs {
+		fmt.Println(" ", l)
+	}
+	fmt.Println("\nAvailable plugins (external):")
+	plugins := reg.ListExternal()
+	if len(plugins) == 0 {
+		fmt.Println("  (none found)")
+	} else {
+		for _, p := range plugins {
+			fmt.Println(" ", p)
+		}
+	}
 }
 
 func runShowTemplate(args []string) {
-	if len(args) == 0 {
+	fs := flag.NewFlagSet("show-template", flag.ExitOnError)
+	langDir := fs.String("lang-dir", "", "directory to find external generators")
+	fs.Parse(args)
+
+	positional := fs.Args()
+	if len(positional) == 0 {
 		fmt.Println("usage: mirror show-template <lang>")
 		os.Exit(1)
 	}
-	lang := args[0]
-	// In a complete implementation, this would query the plugin.
-	// For internal plugins, we hardcode showing it.
-	switch lang {
-	case "dart":
-		fmt.Println("Showing default dart template:")
-		fmt.Println("class {{ formatName .Name \"pascal\" }} { ... }")
-	case "go":
-		fmt.Println("Showing default go template:")
-		fmt.Println("type {{ formatName .Name \"pascal\" }} struct { ... }")
-	default:
-		fmt.Printf("Cannot show template for external/unknown language: %s\n", lang)
+	langName := positional[0]
+
+	reg := languages.NewRegistry(*langDir)
+	l, ok := reg.Get(langName)
+	if !ok {
+		fmt.Printf("Language/Plugin %s not found\n", langName)
+		os.Exit(1)
 	}
+
+	tmpl, err := l.Template()
+	if err != nil {
+		fmt.Printf("Error getting template for %s: %v\n", langName, err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Showing default template for %s:\n", langName)
+	fmt.Println(tmpl)
 }
 
 func runLangManagement(args []string) {

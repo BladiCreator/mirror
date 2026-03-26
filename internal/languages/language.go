@@ -5,8 +5,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
-	"github.com/mirror/mirror/internal/languages/internal"
+	"github.com/mirror/mirror/internal/languages/builtin"
 	pm "github.com/mirror/mirror/internal/languages/model"
 )
 
@@ -19,8 +20,8 @@ type Registry struct {
 // NewRegistry creates a language registry.
 func NewRegistry(languagesDir string) *Registry {
 	reg := &Registry{internal: map[string]pm.Language{}, languageDir: languagesDir}
-	for _, p := range internal.InternalLanguage() {
-		reg.internal[p.Name()] = p
+	for _, l := range builtin.InternalLanguage() {
+		reg.internal[l.Name()] = l
 	}
 	return reg
 }
@@ -37,7 +38,7 @@ func (r *Registry) Get(name string) (pm.Language, bool) {
 
 func (r *Registry) findExternalBinary(name string) (string, error) {
 	if r.languageDir != "" {
-		candidate := filepath.Join(r.languageDir, name)
+		candidate := filepath.Join(r.languageDir, "mirror-lang-"+name)
 		if runtime.GOOS == "windows" {
 			candidate += ".exe"
 		}
@@ -45,7 +46,7 @@ func (r *Registry) findExternalBinary(name string) (string, error) {
 			return candidate, nil
 		}
 	}
-	return execLookPath(name)
+	return execLookPath("mirror-lang-" + name)
 }
 
 func execLookPath(name string) (string, error) {
@@ -67,6 +68,41 @@ func (r *Registry) Analyzers() map[string]pm.Analyzer {
 	for name, lang := range r.internal {
 		if a := lang.Analyzer(); a != nil {
 			res[name] = a
+		}
+	}
+	return res
+}
+
+// ListInternal returns names of all internal languages.
+func (r *Registry) ListInternal() []string {
+	var res []string
+	for name := range r.internal {
+		res = append(res, name)
+	}
+	return res
+}
+
+// ListExternal returns names of all external plugins found in languageDir.
+func (r *Registry) ListExternal() []string {
+	var res []string
+	if r.languageDir == "" {
+		return res
+	}
+	files, err := os.ReadDir(r.languageDir)
+	if err != nil {
+		return res
+	}
+	for _, f := range files {
+		if !f.IsDir() && strings.HasPrefix(f.Name(), "mirror-lang-") {
+			name := strings.TrimPrefix(f.Name(), "mirror-lang-")
+			if runtime.GOOS == "windows" {
+				name = strings.TrimSuffix(name, ".exe")
+			}
+			// Avoid duplicates if an internal language has a binary with the same name
+			if _, ok := r.internal[name]; ok {
+				continue
+			}
+			res = append(res, name)
 		}
 	}
 	return res

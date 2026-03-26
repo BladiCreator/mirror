@@ -1,4 +1,4 @@
-package internal
+package builtin
 
 import (
 	"go/ast"
@@ -111,6 +111,10 @@ func GoTypeMapper(typeStr string) string {
 
 func (p *GoLanguage) Analyzer() lm.Analyzer {
 	return &GoAnalyzer{}
+}
+
+func (p *GoLanguage) Template() (string, error) {
+	return defaultGoTemplate, nil
 }
 
 type GoAnalyzer struct{}

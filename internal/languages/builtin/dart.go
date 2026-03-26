@@ -1,4 +1,4 @@
-package internal
+package builtin
 
 import (
 	"fmt"
@@ -107,6 +107,10 @@ func DartTypeMapper(typeStr string) string {
 
 func (p *DartLanguage) Analyzer() lm.Analyzer {
 	return &DartAnalyzer{}
+}
+
+func (p *DartLanguage) Template() (string, error) {
+	return defaultDartTemplate, nil
 }
 
 type DartAnalyzer struct{}
