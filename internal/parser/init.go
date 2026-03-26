@@ -1,0 +1,70 @@
+package parser
+
+import (
+	"fmt"
+
+	lm "github.com/mirror/mirror/internal/languages/model"
+	"github.com/mirror/mirror/internal/model"
+)
+
+// DetectPredominantLanguage returns the language code with the highest detection score.
+func DetectPredominantLanguage(dir string, analyzers map[string]lm.Analyzer) (string, error) {
+	bestLang := ""
+	maxCount := -1
+
+	for lang, a := range analyzers {
+		count, err := a.Detect(dir)
+		if err != nil {
+			continue
+		}
+		if count > maxCount {
+			maxCount = count
+			bestLang = lang
+		}
+	}
+
+	if maxCount <= 0 {
+		return "", fmt.Errorf("no supported source files detected in %s", dir)
+	}
+
+	return bestLang, nil
+}
+
+// ExtractSchemas uses the specified language's analyzer to extract schemas.
+func ExtractSchemas(lang, dir string, analyzers map[string]lm.Analyzer) ([]*model.Schema, error) {
+	a, ok := analyzers[lang]
+	if !ok {
+		return nil, fmt.Errorf("no analyzer found for %s", lang)
+	}
+	return a.Extract(dir)
+}
+
+// InitialSetup interactively creates the mirror.yml.
+// Since we are in an AI context, we might need a non-interactive way or clear instructions.
+func InitialSetup(detectedLang string, schemas []*model.Schema, chosenLangs []string) (*model.MRRFile, error) {
+	mrr := &model.MRRFile{
+		Languages: make(map[string]model.LanguageConfig),
+		Schemas:   make(map[string]*model.Schema),
+	}
+
+	for _, l := range chosenLangs {
+		config := model.LanguageConfig{
+			Filepath: "./mrr/" + l,
+			Format:   "pascal",
+		}
+		if l == "dart" {
+			config.Filepath = "./lib/models"
+			config.Format = "snake"
+		} else if l == "go" {
+			config.Filepath = "./internal/models"
+			config.Format = "pascal"
+		}
+		mrr.Languages[l] = config
+	}
+
+	for _, s := range schemas {
+		mrr.Schemas[s.Name] = s
+	}
+
+	return mrr, nil
+}

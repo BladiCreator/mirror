@@ -11,7 +11,7 @@ import (
 
 var validFormats = map[string]bool{"pascal": true, "snake": true, "camel": true, "kebab": true, "": true}
 
-// ParseFile parses a .mrr file and all its imports.
+// ParseFile parses a .yml file and all its imports.
 func ParseFile(path string) (*model.MRRFile, error) {
 	return parseFile(path, map[string]bool{}, false)
 }
@@ -28,12 +28,10 @@ func parseFile(path string, visited map[string]bool, schemaOnly bool) (*model.MR
 
 	ext := strings.ToLower(filepath.Ext(abs))
 	switch ext {
-	case ".mrr":
-		return parseMRRFile(abs, visited, schemaOnly)
 	case ".yml", ".yaml":
 		return parseYAMLFile(abs, visited, schemaOnly)
 	default:
-		return nil, fmt.Errorf("unsupported file extension %q for path %s", ext, abs)
+		return nil, fmt.Errorf("unsupported file extension %q for path %s (only .yml/.yaml allowed for config)", ext, abs)
 	}
 }
 
@@ -48,34 +46,18 @@ func normalizeImportPath(item, parent string) (string, error) {
 	return trim, nil
 }
 
-// Validate performs semantic checks.
+// Validate performs semantic checks on the parsed config.
 func Validate(mrr *model.MRRFile) error {
-	if len(mrr.Plugins) == 0 {
-		return errors.New("plugin section is required and requires at least one plugin")
-	}
-	if len(mrr.Paths) == 0 {
-		return errors.New("paths section is required and requires at least one path")
+	if len(mrr.Languages) == 0 {
+		return errors.New("languages section is required and requires at least one language")
 	}
 	if len(mrr.Schemas) == 0 {
 		return errors.New("schemas section is required and requires at least one schema")
 	}
 
-	pluginsMap := map[string]bool{}
-	for _, p := range mrr.Plugins {
-		pluginsMap[p] = true
-	}
-
-	for _, pathEntry := range mrr.Paths {
-		if len(pathEntry.Plugins) == 0 {
-			return fmt.Errorf("path entry extension %q has no plugins", pathEntry.Ext)
-		}
-		for _, pn := range pathEntry.Plugins {
-			if !pluginsMap[pn] {
-				return fmt.Errorf("path entry extension %q references plugin that is not declared: %s", pathEntry.Ext, pn)
-			}
-		}
-		if !validFormats[pathEntry.Format] {
-			return fmt.Errorf("invalid format %q in path %s", pathEntry.Format, pathEntry.Ext)
+	for langName, config := range mrr.Languages {
+		if !validFormats[config.Format] {
+			return fmt.Errorf("invalid format %q in language %s", config.Format, langName)
 		}
 	}
 
@@ -93,8 +75,21 @@ func Validate(mrr *model.MRRFile) error {
 					return fmt.Errorf("schema %q references unknown object type %q", s.Name, ref)
 				}
 			}
+			if strings.HasPrefix(f.Type, "list:") {
+				ref := strings.TrimPrefix(f.Type, "list:")
+				if _, ok := mrr.Schemas[ref]; !ok && !isPrimitive(ref) {
+					// list of unknown non-primitive
+				}
+			}
 		}
 	}
-
 	return nil
+}
+
+func isPrimitive(t string) bool {
+	switch t {
+	case "string", "int", "float", "bool":
+		return true
+	}
+	return false
 }

@@ -1,0 +1,207 @@
+package internal
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"strings"
+
+	lm "github.com/mirror/mirror/internal/languages/model"
+	"github.com/mirror/mirror/internal/model"
+	"github.com/mirror/mirror/internal/template"
+)
+
+// GoLanguage generates simple Go structs using MRR templates.
+type GoLanguage struct {
+	Engine *template.Engine
+}
+
+func (p *GoLanguage) Name() string { return "go" }
+
+const defaultGoTemplate = `package {{ filepath_Base input.Config.Filepath }}
+{{ with imports . }}
+import (
+{{ range . }}  "{{ . }}"
+{{ end }})
+{{ end }}
+type {{ formatName .Name "pascal" }} struct {
+{{ range $_, $field := .Fields }}
+  {{ formatName $field.Name "pascal" }} {{ type $field.Type }} ` + "`" + `json:"{{ $field.Name }}"` + "`" + `
+{{ end }}
+}
+`
+
+func (p *GoLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig) ([]model.GeneratedFile, error) {
+	tmpl := defaultGoTemplate
+	if cfg.Template != "" {
+		content, err := os.ReadFile(cfg.Template)
+		if err != nil {
+			return nil, err
+		}
+		tmpl = string(content)
+	}
+
+	extraFuncs := map[string]any{
+		"type": p.ResolveType,
+		"imports": func(s *model.Schema) []string {
+			var res []string
+			// Go default disable is true (usually same package)
+			disable := true
+			if s.Import != nil {
+				// If import: is present in YAML, it might have disable: false
+				// Wait, if specifically added in YAML, we might want to respect it.
+				// However, the rule says "cada lang que tiene su propio valor por defecto".
+				// If user puts `import: ["go:fmt"]`, they expect fmt to be there.
+				// So if s.Import.Langs["go"] has items, we probably shouldn't disable it unless explicitly told.
+				disable = s.Import.Disable
+			}
+
+			if disable {
+				// Check if there are manual overrides that force it enabled
+				// But let's stick to the rule.
+				return res
+			}
+
+			for _, imp := range s.Import.Langs["go"] {
+				if strings.HasPrefix(imp, "auto:") {
+					// Auto imports in Go are usually not needed if same package.
+					// We'll ignore them for Go unless some config says otherwise.
+					continue
+				}
+				res = append(res, imp)
+			}
+			return res
+		},
+	}
+
+	files, err := p.Engine.Render(tmpl, schemas, cfg, extraFuncs)
+	for i := range files {
+		files[i].Path += ".go"
+	}
+	return files, err
+}
+
+func (p *GoLanguage) ResolveType(t string) string {
+	return GoTypeMapper(t)
+}
+
+func GoTypeMapper(typeStr string) string {
+	base, override := ResolveTypeHelper("go", typeStr)
+	if override != "" {
+		return override
+	}
+	if strings.HasPrefix(base, "object:") {
+		return model.ApplyFormat(strings.TrimPrefix(base, "object:"), "pascal")
+	}
+	switch base {
+	case "int":
+		return "int"
+	case "float":
+		return "float64"
+	case "string":
+		return "string"
+	case "bool":
+		return "bool"
+	default:
+		return base
+	}
+}
+
+func (p *GoLanguage) Analyzer() lm.Analyzer {
+	return &GoAnalyzer{}
+}
+
+type GoAnalyzer struct{}
+
+func (a *GoAnalyzer) Detect(dir string) (int, error) {
+	count := 0
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		if filepath.Ext(path) == ".go" {
+			count++
+		}
+		return nil
+	})
+	return count, err
+}
+
+func (a *GoAnalyzer) Extract(dir string) ([]*model.Schema, error) {
+	var schemas []*model.Schema
+	fset := token.NewFileSet()
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || filepath.Ext(path) != ".go" {
+			return err
+		}
+
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return nil
+		}
+
+		ast.Inspect(file, func(n ast.Node) bool {
+			ts, ok := n.(*ast.TypeSpec)
+			if !ok {
+				return true
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok {
+				return true
+			}
+
+			schema := &model.Schema{
+				Name:   ts.Name.Name,
+				Fields: []*model.Field{},
+			}
+
+			for _, f := range st.Fields.List {
+				if len(f.Names) == 0 {
+					continue
+				}
+				for _, fieldName := range f.Names {
+					fieldType := a.goTypeToString(f.Type)
+					if fieldType != "" {
+						schema.Fields = append(schema.Fields, &model.Field{
+							Name: fieldName.Name,
+							Type: fieldType,
+						})
+					}
+				}
+			}
+			if len(schema.Fields) > 0 {
+				schemas = append(schemas, schema)
+			}
+			return true
+		})
+		return nil
+	})
+
+	return schemas, err
+}
+
+func (a *GoAnalyzer) goTypeToString(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		switch t.Name {
+		case "int", "int32", "int64":
+			return "int"
+		case "string":
+			return "string"
+		case "bool":
+			return "bool"
+		case "float32", "float64":
+			return "float"
+		default:
+			return "object:" + t.Name
+		}
+	case *ast.StarExpr:
+		return a.goTypeToString(t.X)
+	case *ast.ArrayType:
+		return "list:" + a.goTypeToString(t.Elt)
+	}
+	return ""
+}

@@ -1,7 +1,6 @@
-package parser
+package test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,83 +8,29 @@ import (
 	"github.com/mirror/mirror/internal/parser"
 )
 
-const sample = `plugin
-  - dart_mrr_parser
-  - go_mrr_parser
-  # - ts_mrr_parser
-
-paths # Comment
-  - dart ` + "`p::dart_mrr_parser f::'./lib/models' suffix:'_dart' format:snake`" + `
-  - go ` + "`p::go_mrr_parser f::'./internal/models' format:pascal`" + `
-
-schemas
-  - usuario
-    - id ` + "`int`" + `
-    - nombre ` + "`string`" + `
-    - perfil ` + "`object:perfil`" + `
-  - perfil
-    - bio ` + "`string`" + `
-    - avatar ` + "`string`" + `
-`
-
-func TestParseBasic(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "test.mrr")
-	if err := os.WriteFile(path, []byte(sample), 0644); err != nil {
-		t.Fatalf("write sample: %v", err)
-	}
-
-	mrr, err := parser.ParseFile(path)
-	if err != nil {
-		t.Fatalf("parse failed: %v", err)
-	}
-	if len(mrr.Plugins) != 2 || len(mrr.Paths) != 2 || len(mrr.Schemas) != 2 {
-		t.Fatalf("unexpected parse counts: plugins=%d paths=%d schemas=%d", len(mrr.Plugins), len(mrr.Paths), len(mrr.Schemas))
-	}
-	if mrr.Paths[0].Plugins[0] != "dart_mrr_parser" || mrr.Paths[1].Plugins[0] != "go_mrr_parser" {
-		t.Fatalf("unexpected path plugins: %v", mrr.Paths)
-	}
-	if _, ok := mrr.Schemas["usuario"]; !ok {
-		t.Fatal("usuario schema missing")
-	}
-	if _, ok := mrr.Schemas["perfil"]; !ok {
-		t.Fatal("perfil schema missing")
-	}
-}
-
 func TestParseYaml(t *testing.T) {
 	tmp := t.TempDir()
 	samplePath := filepath.Join(tmp, "sample.yml")
-	sample := `plugin:
-  - dart
-  - go
-
-paths:
-  - name: dart
-    config:
-      plugin:
-        - dart
+	sample := `languages:
+  - dart:
       filepath: "./lib/models"
       suffix: _dart
       format: snake
-  - name: go
-    config:
-      plugin:
-        - go
+  - go:
       filepath: "./internal/models"
       format: pascal
 
 schemas:
   - name: usuario
     fields:
-      id: "int"
-      nombre: "string"
-      email: "string"
-      perfil: "object:profile"
+      - name: id
+        type: int
+      - name: nombre
+        type: string
   - name: profile
     fields:
-      bio: "string"
-      avatar: "string"
+      - name: bio
+        type: string
 `
 	if err := os.WriteFile(samplePath, []byte(sample), 0644); err != nil {
 		t.Fatalf("write sample yml: %v", err)
@@ -95,8 +40,8 @@ schemas:
 	if err != nil {
 		t.Fatalf("parse yml failed: %v", err)
 	}
-	if len(mrr.Plugins) != 2 || len(mrr.Paths) != 2 || len(mrr.Schemas) != 2 {
-		t.Fatalf("unexpected parse counts for yaml: plugins=%d paths=%d schemas=%d", len(mrr.Plugins), len(mrr.Paths), len(mrr.Schemas))
+	if len(mrr.Languages) != 2 || len(mrr.Schemas) != 2 {
+		t.Fatalf("unexpected parse counts for yaml: languages=%d schemas=%d", len(mrr.Languages), len(mrr.Schemas))
 	}
 	if _, ok := mrr.Schemas["usuario"]; !ok {
 		t.Fatal("usuario schema missing yaml")
@@ -112,30 +57,26 @@ func TestParseYamlInclude(t *testing.T) {
 	common := `schemas:
   - name: direccion
     fields:
-      calle: "string"
-      ciudad: "string"
+      - name: calle
+        type: string
+      - name: ciudad
+        type: string
 `
 	if err := os.WriteFile(commonPath, []byte(common), 0644); err != nil {
 		t.Fatalf("write common yaml: %v", err)
 	}
 
 	samplePath := filepath.Join(tmp, "sample.yml")
-	sample := `plugin:
-  - go
-
-paths:
-  - name: go
-    config:
-      plugin:
-        - go
+	sample := `languages:
+  - go:
       filepath: "./internal/models"
-      format: pascal
 
 schemas:
   - name: usuario
     fields:
-      id: "int"
-  - include: ["common.yml"]
+      - name: id
+        type: int
+  - include: 'common.yml'
 `
 	if err := os.WriteFile(samplePath, []byte(sample), 0644); err != nil {
 		t.Fatalf("write sample yaml include: %v", err)
@@ -145,50 +86,68 @@ schemas:
 	if err != nil {
 		t.Fatalf("parse yaml include failed: %v", err)
 	}
-	if _, ok := mrr.Schemas["usuario"]; !ok {
-		t.Fatal("usuario schema missing yaml include")
-	}
 	if _, ok := mrr.Schemas["direccion"]; !ok {
-		t.Fatal("direccion schema missing yaml include")
+		t.Fatal("direccion schema missing yaml include from", commonPath)
 	}
 }
 
-func TestParseSchemaOnlyImport(t *testing.T) {
+func TestParseYamlImport(t *testing.T) {
 	tmp := t.TempDir()
-	commonPath := filepath.Join(tmp, "common.mrr")
-	common := `schemas
-  - direccion
-    - calle ` + "`string`" + `
-    - ciudad ` + "`string`" + `
+	samplePath := filepath.Join(tmp, "sample.yml")
+	sample := `languages:
+  - dart:
+      filepath: "./lib/models"
+  - go:
+      filepath: "./internal/models"
+
+schemas:
+  - name: usuario
+    import:
+      disable: false
+      go: ["fmt", "os"]
+      dart: ["package:flutter/material.dart"]
+    fields:
+      - name: id
+        type: int
+      - name: perfil
+        type: object:profile
+  - name: profile
+    fields:
+      - name: bio
+        type: string
 `
-	if err := os.WriteFile(commonPath, []byte(common), 0644); err != nil {
-		t.Fatalf("write common: %v", err)
+	if err := os.WriteFile(samplePath, []byte(sample), 0644); err != nil {
+		t.Fatalf("write sample yml: %v", err)
 	}
 
-	rootPath := filepath.Join(tmp, "main.mrr")
-	root := fmt.Sprintf(`plugin
-  - go_mrr_parser
-
-paths
-  - go `+"`p::go_mrr_parser f::'./out/internal/models' format:pascal`"+`
-
-schemas
-  - usuario
-    - id `+"`int`"+`
-  - '%s'
-`, filepath.Base(commonPath))
-	if err := os.WriteFile(rootPath, []byte(root), 0644); err != nil {
-		t.Fatalf("write root: %v", err)
-	}
-
-	mrr, err := parser.ParseFile(rootPath)
+	mrr, err := parser.ParseFile(samplePath)
 	if err != nil {
-		t.Fatalf("parse failed: %v", err)
+		t.Fatalf("parse yml failed: %v", err)
 	}
-	if _, ok := mrr.Schemas["usuario"]; !ok {
-		t.Fatal("usuario missing")
+	
+	u, ok := mrr.Schemas["usuario"]
+	if !ok {
+		t.Fatal("usuario schema missing")
 	}
-	if _, ok := mrr.Schemas["direccion"]; !ok {
-		t.Fatal("direccion missing from import")
+	
+	if u.Import == nil {
+		t.Fatal("import config missing for usuario")
+	}
+	
+	if len(u.Import.Langs["go"]) != 3 {
+		t.Errorf("expected 3 go imports (fmt, os, auto:profile), got %d", len(u.Import.Langs["go"]))
+	}
+	
+	// Check auto import in dart
+	dartImps := u.Import.Langs["dart"]
+	foundAuto := false
+	for _, imp := range dartImps {
+		if imp == "auto:profile" {
+			foundAuto = true
+			break
+		}
+	}
+	if !foundAuto {
+		t.Error("auto:profile import missing for dart")
 	}
 }

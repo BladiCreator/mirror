@@ -2,44 +2,53 @@ package model
 
 import "path/filepath"
 
-// MRRFile represents a parsed .mrr definition.
+// MRRFile represents a parsed configuration file (.yml).
 type MRRFile struct {
-	Filepath string             `json:"filepath"`
-	Plugins  []string           `json:"plugins"`
-	Paths    []*PathEntry       `json:"paths"`
-	Schemas  map[string]*Schema `json:"schemas"`
-	Imports  []string           `json:"imports"`
+	Filepath  string
+	Languages map[string]LanguageConfig `json:"languages"`
+	Schemas   map[string]*Schema        `json:"schemas"`
+	Imports   []string                  `json:"imports"`
+	Plugins   []string                  `json:"plugin"`
 }
 
-// PathEntry describes output options for a set of generated files.
-type PathEntry struct {
-	Ext       string   `json:"ext"`
-	Plugins   []string `json:"plugins"`
-	OutputDir string   `json:"output_dir"`
-	Suffix    string   `json:"suffix"`
-	Format    string   `json:"format"`
+// LanguageConfig describes output options for a set of generated files.
+type LanguageConfig struct {
+	Filepath string `json:"filepath" yaml:"filepath"`
+	Suffix   string `json:"suffix" yaml:"suffix"`
+	Format   string `json:"format" yaml:"format"`
+	Template string `json:"template" yaml:"template"`
 }
 
 // Schema represents a model schema with fields and tags.
 type Schema struct {
-	Name   string            `json:"name"`
-	Tags   map[string]string `json:"tags"`
-	Fields []*Field          `json:"fields"`
+	Name   string                    `json:"name" yaml:"name"`
+	Meta   map[string]map[string]any `json:"meta,omitempty" yaml:"meta,omitempty"`
+	Fields []*Field                  `json:"fields" yaml:"fields"`
+	Import *ImportConfig             `json:"import,omitempty" yaml:"import,omitempty"`
+}
+
+// ImportConfig manages code imports for generated files.
+type ImportConfig struct {
+	Disable bool                `json:"disable" yaml:"disable"`
+	Langs   map[string][]string `json:"langs" yaml:"langs"`
 }
 
 // Field represents a field on a schema.
 type Field struct {
-	Name string            `json:"name"`
-	Type string            `json:"type"`
-	Tags map[string]string `json:"tags"`
+	Name string                    `json:"name" yaml:"name"`
+	Type string                    `json:"type" yaml:"type"`
+	Meta map[string]map[string]any `json:"meta,omitempty" yaml:"meta,omitempty"`
 }
 
-// OutputConfig is the per-plugin generation config.
+// OutputConfig is the per-plugin generation config (passed to generators).
 type OutputConfig struct {
-	Path   string `json:"path"`
-	Suffix string `json:"suffix"`
-	Format string `json:"format"`
+	Filepath string   `json:"filepath"`
+	Suffix   string   `json:"suffix"`
+	Format   string   `json:"format"`
+	Template string   `json:"template"`
+	Plugins  []string `json:"plugin"`
 }
+
 
 // GeneratedFile is the code file produced by a plugin.
 type GeneratedFile struct {
@@ -47,10 +56,10 @@ type GeneratedFile struct {
 	Content string `json:"content"`
 }
 
-// ResolveOutputPath returns the absolute output directory for a PathEntry.
-func (p *PathEntry) ResolveOutputPath(baseDir string) string {
-	if filepath.IsAbs(p.OutputDir) {
-		return p.OutputDir
+// ResolveOutputPath returns the absolute output directory for a given config.
+func (c *LanguageConfig) ResolveOutputPath(baseDir string) string {
+	if filepath.IsAbs(c.Filepath) {
+		return c.Filepath
 	}
-	return filepath.Join(baseDir, p.OutputDir)
+	return filepath.Join(baseDir, c.Filepath)
 }
