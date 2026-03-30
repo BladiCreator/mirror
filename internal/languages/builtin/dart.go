@@ -10,6 +10,7 @@ import (
 	lm "github.com/BladiCreator/mirror/internal/languages/model"
 	"github.com/BladiCreator/mirror/internal/model"
 	"github.com/BladiCreator/mirror/internal/template"
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 // DartLanguage generates simple Dart classes using MRR templates.
@@ -118,13 +119,20 @@ func (p *DartLanguage) Template() (string, error) {
 
 type DartAnalyzer struct{}
 
-func (a *DartAnalyzer) Detect(dir string) (int, error) {
+func (a *DartAnalyzer) Detect(dir string, pattern string) (int, error) {
 	count := 0
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return err
 		}
-		if filepath.Ext(path) == ".dart" {
+		relPath, _ := filepath.Rel(dir, path)
+		matched, err := doublestar.Match(pattern, relPath)
+		if err != nil {
+			return err
+		}
+		if pattern != "" && matched {
+			count++
+		} else if pattern == "" && filepath.Ext(path) == ".dart" {
 			count++
 		}
 		return nil
@@ -132,14 +140,24 @@ func (a *DartAnalyzer) Detect(dir string) (int, error) {
 	return count, err
 }
 
-func (a *DartAnalyzer) Extract(dir string) ([]*model.Schema, error) {
+func (a *DartAnalyzer) Extract(dir string, pattern string) ([]*model.Schema, error) {
 	var schemas []*model.Schema
 	classRegex := regexp.MustCompile(`(?s)class\s+(\w+)\s*\{([^}]*)\}`)
 	fieldRegex := regexp.MustCompile(`\bfinal\s+(\w+)\s+(\w+);`)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || filepath.Ext(path) != ".dart" {
+		if err != nil || info.IsDir() {
 			return err
+		}
+		relPath, _ := filepath.Rel(dir, path)
+		matched, err := doublestar.Match(pattern, relPath)
+		if err != nil {
+			return err
+		}
+		if pattern != "" && !matched {
+			return nil
+		} else if pattern == "" && filepath.Ext(path) != ".dart" {
+			return nil
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {

@@ -2,18 +2,33 @@ package parser
 
 import (
 	"fmt"
+	"path/filepath"
 
 	lm "github.com/BladiCreator/mirror/internal/languages/model"
 	"github.com/BladiCreator/mirror/internal/model"
 )
 
+var extensionToLanguage = map[string]string{
+	".go":   "go",
+	".dart": "dart",
+	// Add more as needed
+}
+
 // DetectPredominantLanguage returns the language code with the highest detection score.
-func DetectPredominantLanguage(dir string, analyzers map[string]lm.Analyzer) (string, error) {
+func DetectPredominantLanguage(dir string, pattern string, analyzers map[string]lm.Analyzer) (string, error) {
+	// If pattern contains extension, infer language
+	if pattern != "" {
+		ext := filepath.Ext(pattern)
+		if lang, ok := extensionToLanguage[ext]; ok {
+			return lang, nil
+		}
+	}
+
 	bestLang := ""
 	maxCount := -1
 
 	for lang, a := range analyzers {
-		count, err := a.Detect(dir)
+		count, err := a.Detect(dir, pattern)
 		if err != nil {
 			continue
 		}
@@ -24,19 +39,23 @@ func DetectPredominantLanguage(dir string, analyzers map[string]lm.Analyzer) (st
 	}
 
 	if maxCount <= 0 {
-		return "", fmt.Errorf("no supported source files detected in %s", dir)
+		if pattern != "" {
+			return "", fmt.Errorf("no supported source files detected in %s with pattern %s", dir, pattern)
+		} else {
+			return "", fmt.Errorf("no supported source files detected in %s", dir)
+		}
 	}
 
 	return bestLang, nil
 }
 
 // ExtractSchemas uses the specified language's analyzer to extract schemas.
-func ExtractSchemas(lang, dir string, analyzers map[string]lm.Analyzer) ([]*model.Schema, error) {
+func ExtractSchemas(lang, dir, pattern string, analyzers map[string]lm.Analyzer) ([]*model.Schema, error) {
 	a, ok := analyzers[lang]
 	if !ok {
 		return nil, fmt.Errorf("no analyzer found for %s", lang)
 	}
-	return a.Extract(dir)
+	return a.Extract(dir, pattern)
 }
 
 // InitialSetup interactively creates the mirror.yml.

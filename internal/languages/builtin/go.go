@@ -11,6 +11,7 @@ import (
 	lm "github.com/BladiCreator/mirror/internal/languages/model"
 	"github.com/BladiCreator/mirror/internal/model"
 	"github.com/BladiCreator/mirror/internal/template"
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 // GoLanguage generates simple Go structs using MRR templates.
@@ -113,13 +114,20 @@ func (p *GoLanguage) Template() (string, error) {
 
 type GoAnalyzer struct{}
 
-func (a *GoAnalyzer) Detect(dir string) (int, error) {
+func (a *GoAnalyzer) Detect(dir string, pattern string) (int, error) {
 	count := 0
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return err
 		}
-		if filepath.Ext(path) == ".go" {
+		relPath, _ := filepath.Rel(dir, path)
+		matched, err := doublestar.Match(pattern, relPath)
+		if err != nil {
+			return err
+		}
+		if pattern != "" && matched {
+			count++
+		} else if pattern == "" && filepath.Ext(path) == ".go" {
 			count++
 		}
 		return nil
@@ -127,13 +135,23 @@ func (a *GoAnalyzer) Detect(dir string) (int, error) {
 	return count, err
 }
 
-func (a *GoAnalyzer) Extract(dir string) ([]*model.Schema, error) {
+func (a *GoAnalyzer) Extract(dir string, pattern string) ([]*model.Schema, error) {
 	var schemas []*model.Schema
 	fset := token.NewFileSet()
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || filepath.Ext(path) != ".go" {
+		if err != nil || info.IsDir() {
 			return err
+		}
+		relPath, _ := filepath.Rel(dir, path)
+		matched, err := doublestar.Match(pattern, relPath)
+		if err != nil {
+			return err
+		}
+		if pattern != "" && !matched {
+			return nil
+		} else if pattern == "" && filepath.Ext(path) != ".go" {
+			return nil
 		}
 
 		file, err := parser.ParseFile(fset, path, nil, 0)

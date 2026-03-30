@@ -95,17 +95,37 @@ func runInit(args []string) {
 	reg := languages.NewRegistry("")
 	analyzers := reg.Analyzers()
 
-	fmt.Println("Which directory should I analyze to find your models? (default: '.')")
-	var scanDir string
+	fmt.Println("Enter directory and optional pattern (e.g., . *_model.go) or press Enter for '.' and all files:")
+	var input string
 	if scanner.Scan() {
-		scanDir = scanner.Text()
+		input = scanner.Text()
 	}
-	if scanDir == "" {
+	var scanDir, pattern string
+	if input == "" {
 		scanDir = "."
+		pattern = ""
+	} else {
+		parts := strings.Fields(input)
+		if len(parts) == 1 {
+			part := parts[0]
+			if strings.ContainsAny(part, "*?") {
+				// Treat as pattern for current dir
+				scanDir = "."
+				pattern = part
+			} else {
+				// Treat as directory
+				scanDir = part
+				pattern = ""
+			}
+		} else {
+			// First is dir, second is pattern
+			scanDir = parts[0]
+			pattern = parts[1]
+		}
 	}
 
 	absScanDir, _ := filepath.Abs(scanDir)
-	detected, err := parser.DetectPredominantLanguage(absScanDir, analyzers)
+	detected, err := parser.DetectPredominantLanguage(absScanDir, pattern, analyzers)
 	if err != nil {
 		fmt.Println("Error detecting predominant language:", err)
 		os.Exit(1)
@@ -121,22 +141,22 @@ func runInit(args []string) {
 	fmt.Printf("Detected: [%s]\n", detected)
 	fmt.Println("Enter languages to add (comma-separated) or just press Enter to use detected:")
 
-	var input string
+	var langInput string
 	if scanner.Scan() {
-		input = scanner.Text()
+		langInput = scanner.Text()
 	}
 
 	selected := []string{detected}
-	if input != "" {
+	if langInput != "" {
 		selected = []string{}
-		parts := strings.Split(input, ",")
-		for _, p := range parts {
+		parts := strings.SplitSeq(langInput, ",")
+		for p := range parts {
 			selected = append(selected, strings.TrimSpace(p))
 		}
 	}
 
 	fmt.Println("Extracting schemas...")
-	schemas, err := parser.ExtractSchemas(detected, absScanDir, analyzers)
+	schemas, err := parser.ExtractSchemas(detected, absScanDir, pattern, analyzers)
 	if err != nil {
 		fmt.Println("Error extracting schemas:", err)
 		os.Exit(1)

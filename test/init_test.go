@@ -41,7 +41,7 @@ type Profile struct {
 		t.Fatal("go analyzer not found")
 	}
 
-	count, err := goAnalyzer.Detect(tmp)
+	count, err := goAnalyzer.Detect(tmp, "")
 	if err != nil {
 		t.Fatalf("detect failed: %v", err)
 	}
@@ -49,7 +49,7 @@ type Profile struct {
 		t.Errorf("expected 2 go files, got %d", count)
 	}
 
-	schemas, err := goAnalyzer.Extract(tmp)
+	schemas, err := goAnalyzer.Extract(tmp, "")
 	if err != nil {
 		t.Fatalf("extract failed: %v", err)
 	}
@@ -78,17 +78,52 @@ func TestDartAnalyzer(t *testing.T) {
 		t.Fatal("dart analyzer not found")
 	}
 
-	count, _ := dartAnalyzer.Detect(tmp)
+	count, _ := dartAnalyzer.Detect(tmp, "")
 	if count != 1 {
 		t.Errorf("expected 1 dart file, got %d", count)
 	}
 
-	schemas, err := dartAnalyzer.Extract(tmp)
+	schemas, err := dartAnalyzer.Extract(tmp, "")
 	if err != nil {
 		t.Fatalf("extract failed: %v", err)
 	}
 	if len(schemas) != 1 || schemas[0].Name != "Item" {
 		t.Fatalf("expected schema Item, got %v", schemas)
+	}
+}
+
+func TestPatternDetection(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Create a file matching pattern
+	goCode := `package models
+type UserModel struct {
+	ID int
+}
+`
+	if err := os.WriteFile(filepath.Join(tmp, "user_model.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	reg := languages.NewRegistry("")
+	analyzers := reg.Analyzers()
+
+	// Test pattern detection
+	detected, err := parser.DetectPredominantLanguage(tmp, "*_model.go", analyzers)
+	if err != nil {
+		t.Fatalf("detect failed: %v", err)
+	}
+	if detected != "go" {
+		t.Errorf("expected go, got %s", detected)
+	}
+
+	// Test extension inference
+	detected2, err := parser.DetectPredominantLanguage(tmp, "*.go", analyzers)
+	if err != nil {
+		t.Fatalf("detect failed: %v", err)
+	}
+	if detected2 != "go" {
+		t.Errorf("expected go, got %s", detected2)
 	}
 }
 

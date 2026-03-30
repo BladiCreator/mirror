@@ -22,8 +22,8 @@ type Language interface {
 
 // Analyzer defines how to detect and extract schemas from source files.
 type Analyzer interface {
-	Detect(dir string) (int, error)
-	Extract(dir string) ([]*model.Schema, error)
+	Detect(dir string, pattern string) (int, error)
+	Extract(dir string, pattern string) ([]*model.Schema, error)
 }
 
 // ExternalLanguage executes an external binary plugin via JSON stdin/stdout.
