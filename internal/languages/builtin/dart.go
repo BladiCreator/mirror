@@ -44,6 +44,9 @@ func (p *DartLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig)
 		tmpl = string(content)
 	}
 
+	// Filter fields based on meta.dart.binding.omit
+	filteredSchemas := FilterFieldsByOmit("dart", schemas)
+
 	extraFuncs := map[string]any{
 		"type": p.ResolveType,
 		"imports": func(s *model.Schema) []string {
@@ -72,7 +75,7 @@ func (p *DartLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig)
 		},
 	}
 
-	files, err := p.Engine.Render(tmpl, schemas, cfg, extraFuncs)
+	files, err := p.Engine.Render(tmpl, filteredSchemas, cfg, extraFuncs)
 	for i := range files {
 		files[i].Path += ".dart"
 	}

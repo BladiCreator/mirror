@@ -154,6 +154,56 @@ schemas:
   - include: 'common/address.yml'
 ```
 
+### 2.2. Schema Binding (`binding`)
+
+The `binding` property allows a schema to inherit all fields from one or more other schemas. This is extremely useful when multiple schemas share similar properties or when a specific language requires a unified object representing multiple related models.
+
+#### Usage
+Add the `binding` key followed by an array of schema names:
+
+```yaml
+schemas:
+  - name: login
+    fields:
+      - name: email
+        type: string
+      - name: password
+        type: string
+
+  - name: signup
+    binding: [login]
+    fields:
+      - name: username
+        type: string
+```
+
+In this example, `signup` will effectively have three fields: `email`, `password`, and `username`.
+
+#### Overriding Fields
+If a schema defines a field with the same name as a field in a bound schema, the local definition takes precedence. This allows customizing types or metadata for specific fields while inheriting the rest.
+
+#### Recursive Binding
+Bindings are resolved recursively. If `Schema C` binds `Schema B`, and `Schema B` binds `Schema A`, then `Schema C` will inherit fields from both `A` and `B`.
+
+#### Language-Specific Omission (`omit`)
+You can omit certain inherited fields for a specific language using the `meta` configuration. This is done via `meta.<language>.binding.omit`.
+
+Example:
+```yaml
+schemas:
+  - name: signup
+    binding: [login]
+    meta:
+      go:
+        binding:
+          omit: [password] # Omit password for Go structs
+    fields:
+      - name: username
+        type: string
+```
+
+In the generated Go code for `signup`, the `password` field will be excluded, while in other languages it will still be present.
+
 ### 2.3. Import Management (`import`)
 
 The `import` field allows managing external dependencies (packages) and internal references between schemas. It is a fundamental piece in languages like Dart (where classes usually reside in separate files) and allows enriching Go files with necessary imports automatically or manually.

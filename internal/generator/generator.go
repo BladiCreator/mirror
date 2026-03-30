@@ -17,10 +17,10 @@ type Result struct {
 }
 
 // Generate runs plugin generation and writes files based on target languages.
-func Generate(mrr *model.MRRFile, reg *languages.Registry, baseOutput string, verbose bool) (*Result, error) {
+func Generate(mrr *model.MirrorFile, reg *languages.Registry, baseOutput string, verbose bool) (*Result, error) {
 	res := &Result{}
 	var allSchemas []*model.Schema
-	
+
 	// Convert schemas map to list for generators
 	for _, s := range mrr.Schemas {
 		allSchemas = append(allSchemas, s)
@@ -44,14 +44,14 @@ func Generate(mrr *model.MRRFile, reg *languages.Registry, baseOutput string, ve
 
 		cfg := model.OutputConfig{
 			Language: langName,
-			Filepath: outputDir, 
-			Suffix:   config.Suffix, 
+			Filepath: outputDir,
+			Suffix:   config.Suffix,
 			Format:   config.Format,
 			Template: config.Template,
 			Plugins:  mrr.Plugins,
 		}
 		verbosePrintln(verbose, "[verbose] Config %+v\n", cfg)
-		
+
 		files, err := plg.Generate(allSchemas, cfg)
 		if err != nil {
 			res.Errors = append(res.Errors, err)

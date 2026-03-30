@@ -41,8 +41,8 @@ func ExtractSchemas(lang, dir string, analyzers map[string]lm.Analyzer) ([]*mode
 
 // InitialSetup interactively creates the mirror.yml.
 // Since we are in an AI context, we might need a non-interactive way or clear instructions.
-func InitialSetup(detectedLang string, schemas []*model.Schema, chosenLangs []string) (*model.MRRFile, error) {
-	mrr := &model.MRRFile{
+func InitialSetup(detectedLang string, schemas []*model.Schema, chosenLangs []string) (*model.MirrorFile, error) {
+	mrr := &model.MirrorFile{
 		Languages: make(map[string]model.LanguageConfig),
 		Schemas:   make(map[string]*model.Schema),
 	}

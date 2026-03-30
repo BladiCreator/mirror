@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*model.MRRFile, error) {
+func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*model.MirrorFile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -23,8 +23,9 @@ func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*mode
 			Type string                    `yaml:"type"`
 			Meta map[string]map[string]any `yaml:"meta"`
 		} `yaml:"fields"`
-		Include string `yaml:"include"`
-		Import  any    `yaml:"import"`
+		Binding []string `yaml:"binding"`
+		Include string   `yaml:"include"`
+		Import  any      `yaml:"import"`
 	}
 
 	type yamlFile struct {
@@ -39,7 +40,7 @@ func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*mode
 		return nil, err
 	}
 
-	mrr := &model.MRRFile{
+	mrr := &model.MirrorFile{
 		Filepath:  path,
 		Languages: make(map[string]model.LanguageConfig),
 		Schemas:   map[string]*model.Schema{},
@@ -85,10 +86,11 @@ func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*mode
 				return nil, fmt.Errorf("schema %q already defined in %s", s.Name, path)
 			}
 			schema := &model.Schema{
-				Name:   s.Name,
-				Meta:   s.Meta,
-				Fields: []*model.Field{},
-				Import: processImport(s.Import),
+				Name:    s.Name,
+				Meta:    s.Meta,
+				Binding: s.Binding,
+				Fields:  []*model.Field{},
+				Import:  processImport(s.Import),
 			}
 			for _, f := range s.Fields {
 				if strings.TrimSpace(f.Name) == "" || strings.TrimSpace(f.Type) == "" {
@@ -102,6 +104,11 @@ func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*mode
 			}
 			mrr.Schemas[s.Name] = schema
 		}
+	}
+
+	// Resolve bindings
+	if err := resolveBindings(mrr, mrr.Schemas); err != nil {
+		return nil, err
 	}
 
 	// Automatic imports per language defaults
@@ -187,4 +194,130 @@ func addImports(config *model.ImportConfig, lang string, imps any) {
 	} else if impStr, ok := imps.(string); ok {
 		config.Langs[lang] = append(config.Langs[lang], impStr)
 	}
+}
+
+func resolveBindings(mrr *model.MirrorFile, schemas map[string]*model.Schema) error {
+	resolved := make(map[string]bool)
+	fetching := make(map[string]bool)
+
+	var resolve func(name string) error
+	resolve = func(name string) error {
+		if resolved[name] {
+			return nil
+		}
+		if fetching[name] {
+			return fmt.Errorf("circular binding detected for schema %q", name)
+		}
+		fetching[name] = true
+
+		s, ok := schemas[name]
+		if !ok {
+			return fmt.Errorf("schema %q not found during binding resolution", name)
+		}
+
+		if len(s.Binding) == 0 {
+			resolved[name] = true
+			fetching[name] = false
+			return nil
+		}
+
+		localFields := s.Fields
+		var finalFields []*model.Field
+		seen := make(map[string]bool)
+
+		for _, boundName := range s.Binding {
+			if err := resolve(boundName); err != nil {
+				return err
+			}
+			boundSchema := schemas[boundName]
+
+			// Inherit fields from bound schema
+			for _, f := range boundSchema.Fields {
+				if !seen[f.Name] {
+					finalFields = append(finalFields, f)
+					seen[f.Name] = true
+				}
+			}
+
+			// Inherit omit lists from bound schema for each language
+			for lang := range mrr.Languages {
+				if boundMeta, ok := boundSchema.Meta[lang]; ok {
+					if boundBinding, ok := boundMeta["binding"].(map[string]any); ok {
+						if boundOmit, ok := boundBinding["omit"].([]any); ok {
+							// Ensure current schema has necessary meta structure
+							if s.Meta == nil {
+								s.Meta = make(map[string]map[string]any)
+							}
+							if s.Meta[lang] == nil {
+								s.Meta[lang] = make(map[string]any)
+							}
+							if s.Meta[lang]["binding"] == nil {
+								s.Meta[lang]["binding"] = make(map[string]any)
+							}
+
+							currentBinding := s.Meta[lang]["binding"].(map[string]any)
+							if currentBinding["omit"] == nil {
+								currentBinding["omit"] = []any{}
+							}
+
+							currentOmit := currentBinding["omit"].([]any)
+							omitMap := make(map[string]bool)
+							for _, o := range currentOmit {
+								if name, ok := o.(string); ok {
+									omitMap[name] = true
+								}
+							}
+
+							for _, o := range boundOmit {
+								if name, ok := o.(string); ok {
+									if !omitMap[name] {
+										currentOmit = append(currentOmit, name)
+										omitMap[name] = true
+									}
+								}
+							}
+							currentBinding["omit"] = currentOmit
+							s.Meta[lang]["binding"] = currentBinding
+						}
+					}
+				}
+			}
+		}
+
+		// Overwrite bound fields with local fields if they have the same name
+		for i, f := range finalFields {
+			for _, lf := range localFields {
+				if lf.Name == f.Name {
+					finalFields[i] = lf
+					break
+				}
+			}
+		}
+
+		// Add new local fields
+		for _, lf := range localFields {
+			localSeen := false
+			for _, f := range finalFields {
+				if f.Name == lf.Name {
+					localSeen = true
+					break
+				}
+			}
+			if !localSeen {
+				finalFields = append(finalFields, lf)
+			}
+		}
+
+		s.Fields = finalFields
+		fetching[name] = false
+		resolved[name] = true
+		return nil
+	}
+
+	for name := range schemas {
+		if err := resolve(name); err != nil {
+			return err
+		}
+	}
+	return nil
 }

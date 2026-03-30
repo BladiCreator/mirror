@@ -12,11 +12,11 @@ import (
 var validFormats = map[string]bool{"pascal": true, "snake": true, "camel": true, "kebab": true, "": true}
 
 // ParseFile parses a .yml file and all its imports.
-func ParseFile(path string) (*model.MRRFile, error) {
+func ParseFile(path string) (*model.MirrorFile, error) {
 	return parseFile(path, map[string]bool{}, false)
 }
 
-func parseFile(path string, visited map[string]bool, schemaOnly bool) (*model.MRRFile, error) {
+func parseFile(path string, visited map[string]bool, schemaOnly bool) (*model.MirrorFile, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func normalizeImportPath(item, parent string) (string, error) {
 }
 
 // Validate performs semantic checks on the parsed config.
-func Validate(mrr *model.MRRFile) error {
+func Validate(mrr *model.MirrorFile) error {
 	if len(mrr.Languages) == 0 {
 		return errors.New("languages section is required and requires at least one language")
 	}

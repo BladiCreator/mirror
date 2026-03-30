@@ -2,8 +2,8 @@ package model
 
 import "path/filepath"
 
-// MRRFile represents a parsed configuration file (.yml).
-type MRRFile struct {
+// MirrorFile represents a parsed configuration file (.yml).
+type MirrorFile struct {
 	Filepath  string
 	Languages map[string]LanguageConfig `json:"languages"`
 	Schemas   map[string]*Schema        `json:"schemas"`
@@ -21,10 +21,11 @@ type LanguageConfig struct {
 
 // Schema represents a model schema with fields and tags.
 type Schema struct {
-	Name   string                    `json:"name" yaml:"name"`
-	Meta   map[string]map[string]any `json:"meta,omitempty" yaml:"meta,omitempty"`
-	Fields []*Field                  `json:"fields" yaml:"fields"`
-	Import *ImportConfig             `json:"import,omitempty" yaml:"import,omitempty"`
+	Name    string                    `json:"name" yaml:"name"`
+	Meta    map[string]map[string]any `json:"meta,omitempty" yaml:"meta,omitempty"`
+	Fields  []*Field                  `json:"fields" yaml:"fields"`
+	Binding []string                  `json:"binding,omitempty" yaml:"binding,omitempty"`
+	Import  *ImportConfig             `json:"import,omitempty" yaml:"import,omitempty"`
 }
 
 // ImportConfig manages code imports for generated files.
@@ -49,7 +50,6 @@ type OutputConfig struct {
 	Template string   `json:"template"`
 	Plugins  []string `json:"plugin"`
 }
-
 
 // GeneratedFile is the code file produced by a plugin.
 type GeneratedFile struct {

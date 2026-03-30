@@ -43,6 +43,9 @@ func (p *GoLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig) (
 		tmpl = string(content)
 	}
 
+	// Filter fields based on meta.go.binding.omit
+	filteredSchemas := FilterFieldsByOmit("go", schemas)
+
 	extraFuncs := map[string]any{
 		"type": p.ResolveType,
 		"imports": func(s *model.Schema) []string {
@@ -50,24 +53,15 @@ func (p *GoLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig) (
 			// Go default disable is true (usually same package)
 			disable := true
 			if s.Import != nil {
-				// If import: is present in YAML, it might have disable: false
-				// Wait, if specifically added in YAML, we might want to respect it.
-				// However, the rule says "cada lang que tiene su propio valor por defecto".
-				// If user puts `import: ["go:fmt"]`, they expect fmt to be there.
-				// So if s.Import.Langs["go"] has items, we probably shouldn't disable it unless explicitly told.
 				disable = s.Import.Disable
 			}
 
 			if disable {
-				// Check if there are manual overrides that force it enabled
-				// But let's stick to the rule.
 				return res
 			}
 
 			for _, imp := range s.Import.Langs["go"] {
 				if strings.HasPrefix(imp, "auto:") {
-					// Auto imports in Go are usually not needed if same package.
-					// We'll ignore them for Go unless some config says otherwise.
 					continue
 				}
 				res = append(res, imp)
@@ -76,7 +70,7 @@ func (p *GoLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig) (
 		},
 	}
 
-	files, err := p.Engine.Render(tmpl, schemas, cfg, extraFuncs)
+	files, err := p.Engine.Render(tmpl, filteredSchemas, cfg, extraFuncs)
 	for i := range files {
 		files[i].Path += ".go"
 	}
