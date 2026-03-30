@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"maps"
+	"path/filepath"
 	"regexp"
 	"text/template"
 
@@ -51,6 +52,14 @@ func (e *Engine) Render(tmplContent string, schemas []*model.Schema, cfg model.O
 		}
 
 		fileName := model.ApplyFormat(schema.Name, cfg.Format) + cfg.Suffix
+		
+		// Handle per-schema subpath from meta
+		if langMeta, ok := schema.Meta[cfg.Language]; ok {
+			if subPath, ok := langMeta["filepath"].(string); ok {
+				fileName = filepath.Join(subPath, fileName)
+			}
+		}
+
 		// The actual extension is appended by the generator plugins.
 		results = append(results, model.GeneratedFile{
 			Path:    fileName,

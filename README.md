@@ -1,40 +1,104 @@
-# mirror
+# Mirror CLI
 
-Herramienta CLI `mirror` para leer archivos `.mrr` y generar código usando plugins.
+**Mirror** is a model-based code generation system. It allows you to define data models in a YAML configuration (`mirror.yml`) and generate code in multiple languages (Dart, Go, TypeScript, etc.) using templates powered by Go's `text/template` engine.
 
-## instalación
+## Key Features
+- **Interactive Initialization**: `mirror init` scans your codebase to automatically detect and extract models.
+- **Dynamic Command Registry**: A modern CLI with built-in help and aliases.
+- **Multi-language Support**: Built-in support for Go and Dart, with easy extensibility for other languages.
+- **Powerful Templates**: Standard Go templates extended with custom plugin functions.
+- **Modular Plugin System**: Support for internal and external plugins for both languages and utility functions.
+- **Recursive Schema Imports**: Split your models into multiple files using `include`.
+- **Intelligent Imports**: Automate language-specific imports (e.g., `package:`, `import "..."`).
+
+## Installation
 
 ```sh
 go install github.com/mirror/mirror/cmd/mirror@latest
 ```
 
-## uso
+## Quick Start
+
+### 1. Initialize a project
+Run `mirror init` in your project root. It will scan for existing structures and help you create a `mirror.yml`.
 
 ```sh
-mirror [--watch] [--verbose] [--plugins-dir dir] [--output-dir dir] archivo.mrr|archivo.yml
+mirror init
 ```
 
-## formato .mrr
+### 2. Configure your models
+Define your schemas and targets in `mirror.yml`:
 
-- secciones obligatorias: `plugin`, `paths`, `schemas`
-- importación de otros `.mrr` con rutas en `schemas`
-- `paths` define extensión, plugins y opciones (`f::`, `suffix`, `format`)
+```yaml
+languages:
+  - go:
+      filepath: "./internal/models"
+      format: pascal
+  - dart:
+      filepath: "./lib/models"
+      format: snake
 
-## plugin interno
-
-- `go_mrr_parser`
-- `dart_mrr_parser`
-
-## protocolo de plugin externo
-
-Entrada JSON en stdin:
-
-```json
-{ "schemas": [...], "output_config": {"path":"...","suffix":"...","format":"..."}}
+schemas:
+  - name: User
+    fields:
+      - name: id
+        type: int
+      - name: email
+        type: string
 ```
 
-Salida JSON en stdout:
+### 3. Generate code
+Run `mirror` to generate the code files.
 
-```json
-{ "files": [{"path":"...","content":"..."}] }
+```sh
+mirror
 ```
+
+## CLI Commands
+
+- `mirror [generate] [file.yml]`: Generate code (default).
+- `mirror init`: Start the interactive setup and model discovery.
+- `mirror ls [plugins|lang]`: List available language generators and function plugins.
+- `mirror [st|show-template] <lang>`: Show the default template for a specific language.
+- `mirror [h|help|--help]`: Show detailed command usage.
+
+## Advanced Usage
+
+### Custom Filepaths per Schema
+You can override the output directory for specific schemas using `meta`:
+
+```yaml
+schemas:
+  - name: AuthUser
+    meta:
+      go:
+        filepath: "auth/" # Generates in ./internal/models/auth/
+```
+
+### Plugin Functions in Templates
+Use namespaced functions in your templates:
+
+```text
+type {{ .Name }} struct {
+{{ range .Fields }}
+  {{ .Name }} {{ .Type }} `json:"{{ .Name | fn:strings:toSnake }}"`
+{{ end }}
+}
+```
+
+### Imports Management
+Automate dependencies and cross-references between schemas:
+
+```yaml
+schemas:
+  - name: User
+    import:
+      go: ["fmt", "os"]
+      dart: ["auto:profile"] # 'auto:' automatically resolves the path for schema 'profile'
+```
+
+## Documentation
+For more detailed information, see the [Architecture and User Guide (document.md)](./document.md).
+
+## License
+MIT

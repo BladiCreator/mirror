@@ -42,6 +42,7 @@ type Field struct {
 
 // OutputConfig is the per-plugin generation config (passed to generators).
 type OutputConfig struct {
+	Language string   `json:"language"`
 	Filepath string   `json:"filepath"`
 	Suffix   string   `json:"suffix"`
 	Format   string   `json:"format"`

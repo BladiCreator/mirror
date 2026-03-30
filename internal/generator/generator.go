@@ -43,11 +43,12 @@ func Generate(mrr *model.MRRFile, reg *languages.Registry, baseOutput string, ve
 		}
 
 		cfg := model.OutputConfig{
+			Language: langName,
 			Filepath: outputDir, 
-			Suffix: config.Suffix, 
-			Format: config.Format,
+			Suffix:   config.Suffix, 
+			Format:   config.Format,
 			Template: config.Template,
-			Plugins: mrr.Plugins,
+			Plugins:  mrr.Plugins,
 		}
 		verbosePrintln(verbose, "[verbose] Config %+v\n", cfg)
 		
