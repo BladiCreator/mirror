@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	lm "github.com/mirror/mirror/internal/languages/model"
-	"github.com/mirror/mirror/internal/model"
+	lm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/model"
 )
 
 // DetectPredominantLanguage returns the language code with the highest detection score.

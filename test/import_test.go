@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mirror/mirror/internal/languages/builtin"
-	"github.com/mirror/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/languages/builtin"
+	"github.com/BladiCreator/mirror/internal/model"
 )
 
 func TestGenerationWithImports(t *testing.T) {
 	langs := builtin.InternalLanguage()
-	
+
 	schemas := []*model.Schema{
 		{
 			Name: "usuario",
@@ -36,9 +36,9 @@ func TestGenerationWithImports(t *testing.T) {
 			goPlg = l.(*builtin.GoLanguage)
 		}
 	}
-	
+
 	goFiles, _ := goPlg.Generate(schemas, cfg)
-	
+
 	if !strings.Contains(goFiles[0].Content, "import (\n  \"fmt\"\n)") {
 		t.Errorf("Go output missing expected import, got:\n%s", goFiles[0].Content)
 	}
@@ -53,9 +53,9 @@ func TestGenerationWithImports(t *testing.T) {
 			dartPlg = l.(*builtin.DartLanguage)
 		}
 	}
-	
+
 	dartFiles, _ := dartPlg.Generate(schemas, model.OutputConfig{Filepath: "./lib/models", Format: "snake"})
-	
+
 	if !strings.Contains(dartFiles[0].Content, "package:flutter/material.dart") {
 		t.Errorf("Dart output missing manual import, got:\n%s", dartFiles[0].Content)
 	}

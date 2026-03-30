@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mirror/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/model"
 	"gopkg.in/yaml.v3"
 )
 

@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/mirror/mirror/internal/functions"
-	"github.com/mirror/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/functions"
+	"github.com/BladiCreator/mirror/internal/model"
 )
 
 // Engine parses and executes MRR templates.
@@ -52,7 +52,7 @@ func (e *Engine) Render(tmplContent string, schemas []*model.Schema, cfg model.O
 		}
 
 		fileName := model.ApplyFormat(schema.Name, cfg.Format) + cfg.Suffix
-		
+
 		// Handle per-schema subpath from meta
 		if langMeta, ok := schema.Meta[cfg.Language]; ok {
 			if subPath, ok := langMeta["filepath"].(string); ok {

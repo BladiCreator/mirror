@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	pm "github.com/mirror/mirror/internal/languages/model"
-	"github.com/mirror/mirror/internal/model"
-	"github.com/mirror/mirror/internal/template"
+	pm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/template"
 )
 
 // InternalLanguage returns built-in language initialized with the template engine.
@@ -70,8 +70,3 @@ func FilterFieldsByOmit(lang string, schemas []*model.Schema) []*model.Schema {
 	}
 	return filteredSchemas
 }
-
-
-
-
-

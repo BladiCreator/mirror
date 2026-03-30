@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mirror/mirror/internal/parser"
+	"github.com/BladiCreator/mirror/internal/parser"
 )
 
 func TestParseYaml(t *testing.T) {
@@ -124,20 +124,20 @@ schemas:
 	if err != nil {
 		t.Fatalf("parse yml failed: %v", err)
 	}
-	
+
 	u, ok := mrr.Schemas["usuario"]
 	if !ok {
 		t.Fatal("usuario schema missing")
 	}
-	
+
 	if u.Import == nil {
 		t.Fatal("import config missing for usuario")
 	}
-	
+
 	if len(u.Import.Langs["go"]) != 3 {
 		t.Errorf("expected 3 go imports (fmt, os, auto:profile), got %d", len(u.Import.Langs["go"]))
 	}
-	
+
 	// Check auto import in dart
 	dartImps := u.Import.Langs["dart"]
 	foundAuto := false

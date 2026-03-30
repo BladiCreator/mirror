@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	lm "github.com/mirror/mirror/internal/languages/model"
-	"github.com/mirror/mirror/internal/model"
-	"github.com/mirror/mirror/internal/template"
+	lm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/template"
 )
 
 // GoLanguage generates simple Go structs using MRR templates.

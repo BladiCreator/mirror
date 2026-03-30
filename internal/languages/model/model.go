@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mirror/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/model"
 )
 
 // Language defines generation behavior.
@@ -80,4 +80,3 @@ func (p *ExternalLanguage) Analyzer() Analyzer {
 func (p *ExternalLanguage) Template() (string, error) {
 	return "Template showing for external plugins is not yet implemented", nil
 }
-

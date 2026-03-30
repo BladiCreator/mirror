@@ -1,4 +1,4 @@
-module github.com/mirror/mirror
+module github.com/BladiCreator/mirror
 
 go 1.25.5
 

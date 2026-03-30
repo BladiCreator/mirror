@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mirror/mirror/internal/generator"
-	"github.com/mirror/mirror/internal/languages"
-	"github.com/mirror/mirror/internal/parser"
+	"github.com/BladiCreator/mirror/internal/generator"
+	"github.com/BladiCreator/mirror/internal/languages"
+	"github.com/BladiCreator/mirror/internal/parser"
 )
 
 func TestPluginFunctions(t *testing.T) {

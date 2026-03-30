@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mirror/mirror/internal/generator"
-	"github.com/mirror/mirror/internal/languages"
-	"github.com/mirror/mirror/internal/parser"
+	"github.com/BladiCreator/mirror/internal/generator"
+	"github.com/BladiCreator/mirror/internal/languages"
+	"github.com/BladiCreator/mirror/internal/parser"
 )
 
 func TestPerSchemaFilepath(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	yamlContent := `
 languages:
   - go:
@@ -54,9 +54,9 @@ schemas:
 	if !found {
 		t.Errorf("expected file at %s not found. Written files: %v", expectedPath, res.WrittenFiles)
 	}
-    
-    // Check if file exists
-    if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
-        t.Errorf("file %s does not exist on disk", expectedPath)
-    }
+
+	// Check if file exists
+	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
+		t.Errorf("file %s does not exist on disk", expectedPath)
+	}
 }

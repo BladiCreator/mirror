@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mirror/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/model"
 )
 
 var validFormats = map[string]bool{"pascal": true, "snake": true, "camel": true, "kebab": true, "": true}

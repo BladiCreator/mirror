@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/mirror/mirror/internal/languages"
-	"github.com/mirror/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/languages"
+	"github.com/BladiCreator/mirror/internal/model"
 )
 
 // Result summarizes generation output.

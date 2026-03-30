@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/mirror/mirror/internal/languages/builtin"
-	pm "github.com/mirror/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/languages/builtin"
+	pm "github.com/BladiCreator/mirror/internal/languages/model"
 )
 
 // Registry holds known languages.

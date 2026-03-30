@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mirror/mirror/internal/model"
-	"github.com/mirror/mirror/internal/template"
+	"github.com/BladiCreator/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/template"
 )
 
 func TestEngineRender(t *testing.T) {

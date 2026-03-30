@@ -3,17 +3,17 @@ package test
 import (
 	"testing"
 
-	"github.com/mirror/mirror/internal/functions"
+	"github.com/BladiCreator/mirror/internal/functions"
 )
 
 func TestBuiltinFunctions(t *testing.T) {
 	fMap := functions.ResolveFuncs([]string{"strings:st"})
-	
+
 	toTitleRaw, ok := fMap["fn_st_toTitle"]
 	if !ok {
 		t.Fatal("fn_st_toTitle function not found")
 	}
-	
+
 	toTitle := toTitleRaw.(func(string) string)
 	res := toTitle("hello_world")
 	if res != "Hello_world" {

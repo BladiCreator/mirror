@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	lm "github.com/mirror/mirror/internal/languages/model"
-	"github.com/mirror/mirror/internal/model"
-	"github.com/mirror/mirror/internal/template"
+	lm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/template"
 )
 
 // DartLanguage generates simple Dart classes using MRR templates.

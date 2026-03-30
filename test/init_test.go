@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mirror/mirror/internal/languages"
-	"github.com/mirror/mirror/internal/model"
-	"github.com/mirror/mirror/internal/parser"
+	"github.com/BladiCreator/mirror/internal/languages"
+	"github.com/BladiCreator/mirror/internal/model"
+	"github.com/BladiCreator/mirror/internal/parser"
 )
 
 func TestGoAnalyzer(t *testing.T) {
 	tmp := t.TempDir()
-	
+
 	goCode := `package models
 type User struct {
 	ID int
@@ -60,7 +60,7 @@ type Profile struct {
 
 func TestDartAnalyzer(t *testing.T) {
 	tmp := t.TempDir()
-	
+
 	dartCode := `class Item {
   final int id;
   final String title;
