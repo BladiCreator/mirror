@@ -170,7 +170,10 @@ func (a *GoAnalyzer) Extract(dir string, pattern string) ([]*model.Schema, error
 			}
 
 			schema := &model.Schema{
-				Name:   ts.Name.Name,
+				Name: ts.Name.Name,
+				Meta: map[string]map[string]any{
+					"go": {"filepath": relPath},
+				},
 				Fields: []*model.Field{},
 			}
 

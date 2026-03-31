@@ -567,13 +567,32 @@ The tool is invoked with the `mirror` command. It supports several subcommands t
 #### Initialization (`init` subcommand)
 
 ```bash
-mirror init
+mirror init [options]
 ```
 
-This command helps configure a new `mirror.yml` project interactively:
-1.  **Recursive Scanning**: Automatically searches for code files (Go, Dart, etc.) in the provided directory.
-2.  **Model Extraction**: Uses language-specific analyzers (internal like `GoAnalyzer` or `DartAnalyzer`) to detect structures/classes and extract their fields automatically.
-3.  **Guided Configuration**: Asks for desired output languages and generates a `mirror.yml` file ready for use.
+This command helps configure a new `mirror.yml` project by analyzing existing code files:
+
+1.  **Recursive Scanning**: Searches for code files (Go, Dart, etc.) in the specified directory using optional patterns.
+2.  **Model Extraction**: Uses language-specific analyzers to detect structures/classes and extract their fields automatically.
+3.  **Configuration Generation**: Creates a `mirror.yml` file with detected schemas and language settings.
+
+Options:
+
+*   `--directory <dir>`: Directory to scan (default: current directory `.`).
+*   `--pattern <pattern>`: File pattern to match (e.g., `*_model.go`, `**/*.dart`). Supports glob patterns with `**` for recursion. If not specified, scans all supported files.
+*   `--languages <list>`: Comma-separated list of languages to generate for (e.g., `go,dart`). If not specified, detects the predominant language automatically.
+*   `--include-paths`: Include source file paths in schema metadata (default: true).
+*   `--help`: Show help for the init command.
+
+Examples:
+
+```bash
+mirror init                                    # With all default values
+mirror init --help                             # Show help
+mirror init --pattern "*_model.go"             # Scan for Go model files
+mirror init --directory src --languages go,dart # Scan src/ for Go and Dart
+mirror init --pattern "**/*.dart" --include-paths=false  # Scan Dart files without paths
+```
 
 #### Code Generation (`generate` subcommand)
 

@@ -171,7 +171,10 @@ func (a *DartAnalyzer) Extract(dir string, pattern string) ([]*model.Schema, err
 			body := match[2]
 
 			schema := &model.Schema{
-				Name:   className,
+				Name: className,
+				Meta: map[string]map[string]any{
+					"dart": {"filepath": relPath},
+				},
 				Fields: []*model.Field{},
 			}
 

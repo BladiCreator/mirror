@@ -133,7 +133,7 @@ func TestInitialSetup(t *testing.T) {
 	}
 	chosen := []string{"go", "dart"}
 
-	mrr, err := parser.InitialSetup("go", schemas, chosen)
+	mrr, err := parser.InitialSetup(".", "go", schemas, chosen)
 	if err != nil {
 		t.Fatalf("InitialSetup failed: %v", err)
 	}

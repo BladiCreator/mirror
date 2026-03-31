@@ -60,22 +60,27 @@ func ExtractSchemas(lang, dir, pattern string, analyzers map[string]lm.Analyzer)
 
 // InitialSetup interactively creates the mirror.yml.
 // Since we are in an AI context, we might need a non-interactive way or clear instructions.
-func InitialSetup(detectedLang string, schemas []*model.Schema, chosenLangs []string) (*model.MirrorFile, error) {
+func InitialSetup(scanDir string, detectedLang string, schemas []*model.Schema, chosenLangs []string) (*model.MirrorFile, error) {
 	mrr := &model.MirrorFile{
 		Languages: make(map[string]model.LanguageConfig),
 		Schemas:   make(map[string]*model.Schema),
 	}
 
+	basePath := "."
+	if scanDir != "." {
+		basePath = "./" + filepath.Base(scanDir)
+	}
+
 	for _, l := range chosenLangs {
 		config := model.LanguageConfig{
-			Filepath: "./mrr/" + l,
+			Filepath: basePath,
 			Format:   "pascal",
 		}
 		if l == "dart" {
-			config.Filepath = "./lib/models"
+			config.Filepath = basePath
 			config.Format = "snake"
 		} else if l == "go" {
-			config.Filepath = "./internal/models"
+			config.Filepath = basePath
 			config.Format = "pascal"
 		}
 		mrr.Languages[l] = config

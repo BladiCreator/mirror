@@ -14,7 +14,7 @@
 ## Installation
 
 ```sh
-go install github.com/mirror/mirror/cmd/mirror@latest
+go install github.com/BladiCreator/mirror/cmd/main@latest
 ```
 
 ## Quick Start
@@ -22,9 +22,23 @@ go install github.com/mirror/mirror/cmd/mirror@latest
 ### 1. Initialize a project
 Run `mirror init` in your project root. It will scan for existing structures and help you create a `mirror.yml`.
 
+The `init` command supports flags:
+
 ```sh
-mirror init
+mirror init --directory . --pattern "*_model.go" --languages "go,dart" --include-paths
 ```
+
+Flags:
+- `--directory` (default: "."): Directory to scan for models.
+- `--pattern` (default: ""): File pattern to match (e.g., *_model.go). If empty, scans all supported files.
+- `--languages` (default: ""): Comma-separated list of languages. If empty, detects the predominant language.
+- `--include-paths` (default: true): Include file paths in schema metadata.
+
+Examples:
+- `mirror init --help`: Show help for the init command.
+- `mirror init`: Interactive mode (legacy).
+- `mirror init --pattern "*_model.go"`: Scan for Go model files, detect language.
+- `mirror init --directory src --languages "go,dart"`: Scan src directory for all files, generate for Go and Dart.
 
 ### 2. Configure your models
 Define your schemas and targets in `mirror.yml`:

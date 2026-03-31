@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -80,7 +79,7 @@ func printHelp() {
 	fmt.Println("\nGeneration Options:")
 	fmt.Println("  --watch              Monitor mirror.yml and included files for changes")
 	fmt.Println("  --verbose            Show detailed generation logs")
-	fmt.Println("  --lang-dir <path>    Specify a directory to search for external plugins")
+	fmt.Println("  --lang-dir <path>    Specify a directory to search for external languages")
 	fmt.Println("\nExamples:")
 	fmt.Println("  mirror init")
 	fmt.Println("  mirror generate mirror.yml --watch")
@@ -88,81 +87,91 @@ func printHelp() {
 }
 
 func runInit(args []string) {
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Initializing mirror project...")
+	fs := flag.NewFlagSet("init", flag.ExitOnError)
+	directory := fs.String("directory", ".", "directory to scan for models")
+	pattern := fs.String("pattern", "", "file pattern to match (e.g., *_model.go)")
+	langs := fs.String("languages", "", "comma-separated list of languages to generate for")
+	includePaths := fs.Bool("include-paths", true, "include file paths in schemas")
+
+	// Custom help
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: mirror init [options]\n\n")
+		fmt.Fprintf(os.Stderr, "Initialize a new mirror.yml by analyzing existing models.\n\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		fs.PrintDefaults()
+	}
+
+	// Parse flags
+	err := fs.Parse(args)
+	if err != nil {
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	// Check for --help
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			fs.Usage()
+			os.Exit(0)
+		}
+	}
 
 	// Registry provides analyzers
 	reg := languages.NewRegistry("")
 	analyzers := reg.Analyzers()
 
-	fmt.Println("Enter directory and optional pattern (e.g., . *_model.go) or press Enter for '.' and all files:")
-	var input string
-	if scanner.Scan() {
-		input = scanner.Text()
-	}
-	var scanDir, pattern string
-	if input == "" {
-		scanDir = "."
-		pattern = ""
-	} else {
-		parts := strings.Fields(input)
-		if len(parts) == 1 {
-			part := parts[0]
-			if strings.ContainsAny(part, "*?") {
-				// Treat as pattern for current dir
-				scanDir = "."
-				pattern = part
-			} else {
-				// Treat as directory
-				scanDir = part
-				pattern = ""
-			}
-		} else {
-			// First is dir, second is pattern
-			scanDir = parts[0]
-			pattern = parts[1]
+	scanDir := *directory
+
+	var selected []string
+	var detected string
+
+	if *langs != "" {
+		selected = strings.Split(*langs, ",")
+		for i, l := range selected {
+			selected[i] = strings.TrimSpace(l)
 		}
+		detected = selected[0]
+	} else {
+		absScanDir, _ := filepath.Abs(scanDir)
+		var err error
+		detected, err = parser.DetectPredominantLanguage(absScanDir, *pattern, analyzers)
+		if err != nil {
+			fmt.Println("Error detecting predominant language:", err)
+			os.Exit(1)
+		}
+		selected = []string{detected}
 	}
+
+	fmt.Printf("Scanning directory: %s\n", scanDir)
+	if *pattern != "" {
+		fmt.Printf("Using pattern: %s\n", *pattern)
+	}
+	fmt.Printf("Languages: %s\n", strings.Join(selected, ", "))
+	fmt.Printf("Include paths: %t\n", *includePaths)
 
 	absScanDir, _ := filepath.Abs(scanDir)
-	detected, err := parser.DetectPredominantLanguage(absScanDir, pattern, analyzers)
-	if err != nil {
-		fmt.Println("Error detecting predominant language:", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Predominant language detected: %s\n", detected)
-
-	var availableLangs []string
-	for l := range analyzers {
-		availableLangs = append(availableLangs, l)
-	}
-
-	fmt.Printf("\nAvailable internal languages: %s\n", strings.Join(availableLangs, ", "))
-	fmt.Printf("Detected: [%s]\n", detected)
-	fmt.Println("Enter languages to add (comma-separated) or just press Enter to use detected:")
-
-	var langInput string
-	if scanner.Scan() {
-		langInput = scanner.Text()
-	}
-
-	selected := []string{detected}
-	if langInput != "" {
-		selected = []string{}
-		parts := strings.SplitSeq(langInput, ",")
-		for p := range parts {
-			selected = append(selected, strings.TrimSpace(p))
-		}
-	}
-
-	fmt.Println("Extracting schemas...")
-	schemas, err := parser.ExtractSchemas(detected, absScanDir, pattern, analyzers)
+	schemas, err := parser.ExtractSchemas(detected, absScanDir, *pattern, analyzers)
 	if err != nil {
 		fmt.Println("Error extracting schemas:", err)
 		os.Exit(1)
 	}
 
-	mrr, err := parser.InitialSetup(detected, schemas, selected)
+	if len(schemas) == 0 {
+		if *pattern != "" {
+			fmt.Printf("Error: No files found matching pattern '%s' in directory '%s'\n", *pattern, scanDir)
+		} else {
+			fmt.Printf("Error: No supported source files found in directory '%s'\n", scanDir)
+		}
+		os.Exit(1)
+	}
+
+	if !*includePaths {
+		for _, s := range schemas {
+			s.Meta = nil
+		}
+	}
+
+	mrr, err := parser.InitialSetup(scanDir, detected, schemas, selected)
 	if err != nil {
 		fmt.Println("Error setup:", err)
 		os.Exit(1)
