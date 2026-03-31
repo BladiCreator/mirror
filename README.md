@@ -33,12 +33,14 @@ Flags:
 - `--pattern` (default: ""): File pattern to match (e.g., *_model.go). If empty, scans all supported files.
 - `--languages` (default: ""): Comma-separated list of languages. If empty, detects the predominant language.
 - `--include-paths` (default: true): Include file paths in schema metadata.
+- `--split` (default: false): Create a `mirror/` directory and save schemas in separate files using `include` statements.
 
 Examples:
 - `mirror init --help`: Show help for the init command.
 - `mirror init`: Interactive mode (legacy).
 - `mirror init --pattern "*_model.go"`: Scan for Go model files, detect language.
 - `mirror init --directory src --languages "go,dart"`: Scan src directory for all files, generate for Go and Dart.
+- `mirror init --split`: Create mirror/ directory with separate schema files.
 
 ### 2. Configure your models
 Define your schemas and targets in `mirror.yml`:

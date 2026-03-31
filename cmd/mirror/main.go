@@ -92,6 +92,7 @@ func runInit(args []string) {
 	pattern := fs.String("pattern", "", "file pattern to match (e.g., *_model.go)")
 	langs := fs.String("languages", "", "comma-separated list of languages to generate for")
 	includePaths := fs.Bool("include-paths", true, "include file paths in schemas")
+	splitSchemas := fs.Bool("split", false, "create mirror/ directory and use includes for schemas")
 
 	// Custom help
 	fs.Usage = func() {
@@ -177,11 +178,6 @@ func runInit(args []string) {
 		os.Exit(1)
 	}
 
-	// Write mirror.yml
-	// data, _ := os.Marshal(mrr) // This line was commented out in the provided snippet
-	// Marshal is not YAML. Wait. I should use YAML.
-	// Actually, parser.parseYAMLFile uses gopkg.in/yaml.v3
-
 	// Create a simple YAML manually for better control of comments/layout
 	var sb strings.Builder
 	sb.WriteString("languages:\n")
@@ -191,12 +187,61 @@ func runInit(args []string) {
 		sb.WriteString(fmt.Sprintf("      format: %s\n", cfg.Format))
 	}
 	sb.WriteString("\nschemas:\n")
-	for name, s := range mrr.Schemas {
-		sb.WriteString(fmt.Sprintf("  - name: %s\n", name))
-		sb.WriteString("    fields:\n")
-		for _, f := range s.Fields {
-			sb.WriteString(fmt.Sprintf("      - name: %s\n", f.Name))
-			sb.WriteString(fmt.Sprintf("        type: %s\n", f.Type))
+
+	if *splitSchemas {
+		// Create mirror directory
+		if err := os.MkdirAll("mirror", 0755); err != nil {
+			fmt.Println("Error creating mirror directory:", err)
+			os.Exit(1)
+		}
+
+		// Write schemas to mirror/schemas.yml
+		var schemasSb strings.Builder
+		for name, s := range mrr.Schemas {
+			schemasSb.WriteString(fmt.Sprintf("  - name: %s\n", name))
+			if s.Meta != nil {
+				schemasSb.WriteString("    meta:\n")
+				for lang, meta := range s.Meta {
+					schemasSb.WriteString(fmt.Sprintf("      %s:\n", lang))
+					for k, v := range meta {
+						schemasSb.WriteString(fmt.Sprintf("        %s: %v\n", k, v))
+					}
+				}
+			}
+			schemasSb.WriteString("    fields:\n")
+			for _, f := range s.Fields {
+				schemasSb.WriteString(fmt.Sprintf("      - name: %s\n", f.Name))
+				schemasSb.WriteString(fmt.Sprintf("        type: %s\n", f.Type))
+			}
+			schemasSb.WriteString("\n")
+		}
+
+		if err := os.WriteFile("mirror/schemas.yml", []byte(schemasSb.String()), 0644); err != nil {
+			fmt.Println("Error writing mirror/schemas.yml:", err)
+			os.Exit(1)
+		}
+
+		// Add include to main
+		sb.WriteString("  - include: mirror/schemas.yml\n")
+	} else {
+		// Write schemas directly
+		for name, s := range mrr.Schemas {
+			sb.WriteString(fmt.Sprintf("  - name: %s\n", name))
+			if s.Meta != nil {
+				sb.WriteString("    meta:\n")
+				for lang, meta := range s.Meta {
+					sb.WriteString(fmt.Sprintf("      %s:\n", lang))
+					for k, v := range meta {
+						sb.WriteString(fmt.Sprintf("        %s: %v\n", k, v))
+					}
+				}
+			}
+			sb.WriteString("    fields:\n")
+			for _, f := range s.Fields {
+				sb.WriteString(fmt.Sprintf("      - name: %s\n", f.Name))
+				sb.WriteString(fmt.Sprintf("        type: %s\n", f.Type))
+			}
+			sb.WriteString("\n")
 		}
 	}
 
@@ -205,7 +250,11 @@ func runInit(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Println("\nSuccessfully created mirror.yml with extracted schemas.")
+	if *splitSchemas {
+		fmt.Println("\nSuccessfully created mirror.yml and mirror/schemas.yml with extracted schemas.")
+	} else {
+		fmt.Println("\nSuccessfully created mirror.yml with extracted schemas.")
+	}
 }
 
 func runGenerate(args []string) {

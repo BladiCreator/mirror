@@ -582,6 +582,7 @@ Options:
 *   `--pattern <pattern>`: File pattern to match (e.g., `*_model.go`, `**/*.dart`). Supports glob patterns with `**` for recursion. If not specified, scans all supported files.
 *   `--languages <list>`: Comma-separated list of languages to generate for (e.g., `go,dart`). If not specified, detects the predominant language automatically.
 *   `--include-paths`: Include source file paths in schema metadata (default: true).
+*   `--split`: Create a `mirror/` directory and save schemas in `mirror/schemas.yml`, using `include` in the main file (default: false).
 *   `--help`: Show help for the init command.
 
 Examples:
@@ -592,7 +593,7 @@ mirror init --help                             # Show help
 mirror init --pattern "*_model.go"             # Scan for Go model files
 mirror init --directory src --languages go,dart # Scan src/ for Go and Dart
 mirror init --pattern "**/*.dart" --include-paths=false  # Scan Dart files without paths
-```
+mirror init --split                             # Create mirror/ with separate schema file```
 
 #### Code Generation (`generate` subcommand)
 

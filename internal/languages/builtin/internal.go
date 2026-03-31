@@ -21,6 +21,8 @@ func InternalLanguage() []pm.Language {
 	return []pm.Language{
 		&GoLanguage{Engine: eng},
 		&DartLanguage{Engine: eng},
+		&TypeScriptLanguage{Engine: eng},
+		&SurrealQLLanguage{Engine: eng},
 	}
 }
 

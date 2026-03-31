@@ -92,8 +92,8 @@ func DartTypeMapper(typeStr string) string {
 	if override != "" {
 		return override
 	}
-	if strings.HasPrefix(base, "object:") {
-		return model.ApplyFormat(strings.TrimPrefix(base, "object:"), "pascal")
+	if after, ok := strings.CutPrefix(base, "object:"); ok {
+		return model.ApplyFormat(after, "pascal")
 	}
 	switch base {
 	case "int":
