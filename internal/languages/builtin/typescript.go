@@ -62,8 +62,8 @@ func (p *TypeScriptLanguage) Generate(schemas []*model.Schema, cfg model.OutputC
 			}
 
 			for _, imp := range s.Import.Langs["typescript"] {
-				if strings.HasPrefix(imp, "auto:") {
-					name := strings.TrimPrefix(imp, "auto:")
+				if after, ok := strings.CutPrefix(imp, "auto:"); ok {
+					name := after
 					// Convert schema name to file name (kebab case usually for TS files)
 					fileName := model.ApplyFormat(name, "kebab") + cfg.Suffix
 					res = append(res, fmt.Sprintf("import { %s } from './%s';", model.ApplyFormat(name, "pascal"), fileName))
@@ -200,8 +200,8 @@ func (a *TypeScriptAnalyzer) Extract(dir string, pattern string) ([]*model.Schem
 
 func (a *TypeScriptAnalyzer) tsTypeToMirror(ty string) string {
 	ty = strings.TrimSpace(ty)
-	if strings.HasSuffix(ty, "[]") {
-		return "list:" + a.tsTypeToMirror(strings.TrimSuffix(ty, "[]"))
+	if before, ok := strings.CutSuffix(ty, "[]"); ok {
+		return "list:" + a.tsTypeToMirror(before)
 	}
 	switch ty {
 	case "number":
