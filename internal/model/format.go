@@ -19,11 +19,12 @@ func ApplyFormat(name string, format string) string {
 		if len(parts) == 0 {
 			return name
 		}
-		p := strings.ToLower(parts[0])
+		var p strings.Builder
+		p.WriteString(strings.ToLower(parts[0]))
 		for i := 1; i < len(parts); i++ {
-			p += TitleCase(parts[i])
+			p.WriteString(TitleCase(parts[i]))
 		}
-		return p
+		return p.String()
 	case "kebab":
 		return strings.ReplaceAll(strings.ToLower(norm), " ", "-")
 	case "pascal":
