@@ -1,6 +1,6 @@
 ## 1. Introduction
 
-**MRR** (Mirror) is a model and template-based code generation system. It allows you to define data models in a YAML configuration file (`.yml`) and generate code in multiple languages (Dart, TypeScript, Go, etc.) using templates written with Go's `text/template` engine. The templates have the `.mrr` extension and are processed by the standard Go engine, which can be extended with custom functions through plugins.
+**Mirror** is a model and template-based code generation system. It allows you to define data models in a YAML configuration file (`.yml`) and generate code in multiple languages (Dart, TypeScript, Go, etc.) using templates written with Go's `text/template` engine. The templates have the `.mrr` extension and are processed by the standard Go engine, which can be extended with custom functions through plugins.
 
 This document describes the complete architecture: YAML configuration format, template language (`text/template`), language generators (internal and external), function plugins, workflow, and terminal usage.
 
@@ -15,9 +15,10 @@ plugin:
   - <plugin_name>[:<alias>]   # optional, an alias can be specified
 languages:   # or "lang"
   - <language_name>:
-      filepath: <output_path> # optional
-      suffix: <optional_suffix> # optional
-      format: <snake|pascal|camel> # optional
+      output:   # recommended format
+        filepath: <output_path> | [<path1>, <path2>] # string or list of strings
+        suffix: <optional_suffix> # optional
+        format: <snake|pascal|camel> # optional
       template: <template_path.mrr>   # optional
 schemas:
   - name: <schema_name>
@@ -57,31 +58,41 @@ plugin:
 
 #### `languages` (or `lang`) Section
 
-A list of languages. Each element is a map with a single key which is the language name (e.g., `dart`, `go`, `ts`). The value is a map with the output configuration for that language:
+A list of languages. Each element is a map with a single key which is the language name (e.g., `dart`, `go`, `ts`). The value is a map with the configuration for that language.
 
-*   `filepath` (required): path where generated files will be saved. It can be absolute or relative to the configuration file. If it ends in `/`, it is considered a directory; otherwise, a single file with that name is generated.
+The recommended way to configure output is using the `output` key.
+
+**`output` Settings:**
+
+*   `filepath` (required): Path or list of paths where generated files will be saved.
+    *   If it's a **string**: A single output destination is used.
+    *   If it's a **list of strings**: The generator will run for each path, allowing you to synchronize models across multiple directories or projects.
+    *   Paths can be absolute or relative to the configuration file. If a path ends in `/`, it is considered a directory; otherwise, a single file with that name is generated.
     
-*   `suffix` (optional): suffix to be added to the base filename (only if `filepath` is a directory).
+*   `suffix` (optional): Suffix to be added to the base filename (only if the target is a directory).
     
-*   `format` (optional): filename format: `snake`, `pascal`, or `camel`. By default, the schema name is used as is.
-    
-*   `template` (optional): path to the `.mrr` template file that will be used to generate the code. If not specified, the internal generator uses its default (embedded) template. If the generator is external, it must have its own mechanism to use a default template or handle the omission.
-    
+*   `format` (optional): Filename format: `snake`, `pascal`, or `camel`.
+
+**Other Settings:**
+
+*   `template` (optional): Path to the `.mrr` template file. If not specified, the internal generator uses its default template.
+
 Example:
 
 ```yaml
 languages:
   - dart:
-      filepath: './lib/models'
-      suffix: '_dart'
-      format: snake
+      output:
+        filepath: 
+          - './lib/models'
+          - '../other_project/lib/models'
+        suffix: '_dart'
+        format: snake
   - go:
-      filepath: './internal/models'
-      format: pascal
+      output:
+        filepath: './internal/models'
+        format: pascal
       template: 'templates/go_struct.mrr'
-  - ts:
-      filepath: './src/models'
-      template: 'templates/ts_interface.mrr'
 ```
 
 #### `schemas` Section
@@ -508,12 +519,14 @@ plugin:
   - strings
 languages:
   - dart:
-      filepath: './lib/models'
-      suffix: '_dart'
-      format: snake
+      output:
+        filepath: './lib/models'
+        suffix: '_dart'
+        format: snake
   - go:
-      filepath: './internal/models'
-      format: pascal
+      output:
+        filepath: './internal/models'
+        format: pascal
       template: 'templates/go_struct.mrr'
 schemas:
   - name: user

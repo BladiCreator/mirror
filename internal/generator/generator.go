@@ -27,9 +27,10 @@ func Generate(mrr *model.MirrorFile, reg *languages.Registry, baseOutput string,
 	}
 
 	for langName, config := range mrr.Languages {
-		outputDir := config.ResolveOutputPath(baseOutput)
-		if !filepath.IsAbs(outputDir) {
-			outputDir, _ = filepath.Abs(outputDir)
+		outputPaths := config.ResolvePaths(baseOutput)
+		if len(outputPaths) == 0 {
+			verbosePrintln(verbose, "[verbose] No output paths for %s, skipping\n", langName)
+			continue
 		}
 
 		plg, ok := reg.Get(langName)
@@ -42,35 +43,41 @@ func Generate(mrr *model.MirrorFile, reg *languages.Registry, baseOutput string,
 			config.Template = filepath.Join(baseOutput, config.Template)
 		}
 
-		cfg := model.OutputConfig{
-			Language: langName,
-			Filepath: outputDir,
-			Suffix:   config.Suffix,
-			Format:   config.Format,
-			Template: config.Template,
-			Plugins:  mrr.Plugins,
-		}
-		verbosePrintln(verbose, "[verbose] Config %+v\n", cfg)
+		for _, outputDir := range outputPaths {
+			if !filepath.IsAbs(outputDir) {
+				outputDir, _ = filepath.Abs(outputDir)
+			}
 
-		files, err := plg.Generate(allSchemas, cfg)
-		if err != nil {
-			res.Errors = append(res.Errors, err)
-			continue
-		}
-		verbosePrintln(verbose, "[verbose] Generated %d files for %s\n", len(files), langName)
+			cfg := model.OutputConfig{
+				Language: langName,
+				Filepath: outputDir,
+				Suffix:   config.GetSuffix(),
+				Format:   config.GetFormat(),
+				Template: config.Template,
+				Plugins:  mrr.Plugins,
+			}
+			verbosePrintln(verbose, "[verbose] Config for area %s: %+v\n", outputDir, cfg)
 
-		for _, file := range files {
-			target := filepath.Join(outputDir, file.Path)
-			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-				res.Errors = append(res.Errors, err)
+			files, err := plg.Generate(allSchemas, cfg)
+			if err != nil {
+				res.Errors = append(res.Errors, fmt.Errorf("%s (%s): %w", langName, outputDir, err))
 				continue
 			}
-			if err := os.WriteFile(target, []byte(file.Content), 0644); err != nil {
-				res.Errors = append(res.Errors, err)
-				continue
+			verbosePrintln(verbose, "[verbose] Generated %d files for %s in %s\n", len(files), langName, outputDir)
+
+			for _, file := range files {
+				target := filepath.Join(outputDir, file.Path)
+				if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+					res.Errors = append(res.Errors, err)
+					continue
+				}
+				if err := os.WriteFile(target, []byte(file.Content), 0644); err != nil {
+					res.Errors = append(res.Errors, err)
+					continue
+				}
+				res.WrittenFiles = append(res.WrittenFiles, target)
+				verbosePrintln(verbose, "[verbose] Wrote %s\n", target)
 			}
-			res.WrittenFiles = append(res.WrittenFiles, target)
-			verbosePrintln(verbose, "[verbose] Wrote %s\n", target)
 		}
 	}
 

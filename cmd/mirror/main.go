@@ -183,8 +183,9 @@ func runInit(args []string) {
 	sb.WriteString("languages:\n")
 	for lang, cfg := range mrr.Languages {
 		fmt.Fprintf(&sb, "  - %s:\n", lang)
-		fmt.Fprintf(&sb, "      filepath: '%s'\n", cfg.Filepath)
-		fmt.Fprintf(&sb, "      format: %s\n", cfg.Format)
+		fmt.Fprintf(&sb, "      output:\n")
+		fmt.Fprintf(&sb, "        filepath: '%s'\n", cfg.GetFilepaths()[0])
+		fmt.Fprintf(&sb, "        format: %s\n", cfg.GetFormat())
 	}
 	sb.WriteString("\nschemas:\n")
 
@@ -208,7 +209,7 @@ func runInit(args []string) {
 			schemasSb.WriteString("schemas:\n")
 			fmt.Fprintf(&schemasSb, "  - name: %s\n", name)
 
-			if s.Binding != nil && len(s.Binding) > 0 {
+			if len(s.Binding) > 0 {
 				schemasSb.WriteString("    binding:\n")
 				for _, b := range s.Binding {
 					fmt.Fprintf(&schemasSb, "      - %s\n", b)
@@ -262,7 +263,7 @@ func runInit(args []string) {
 			s := mrr.Schemas[name]
 			fmt.Fprintf(&sb, "  - name: %s\n", name)
 
-			if s.Binding != nil && len(s.Binding) > 0 {
+			if len(s.Binding) > 0 {
 				sb.WriteString("    binding:\n")
 				for _, b := range s.Binding {
 					fmt.Fprintf(&sb, "      - %s\n", b)

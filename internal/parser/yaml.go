@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*model.MirrorFile, error) {
+func ParseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*model.MirrorFile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -54,8 +54,12 @@ func parseYAMLFile(path string, visited map[string]bool, schemaOnly bool) (*mode
 
 	for _, langMap := range langs {
 		for langName, config := range langMap {
-			if config.Filepath == "" {
-				config.Filepath = langName
+			// If no output paths defined, use language name as default directory
+			if len(config.GetFilepaths()) == 0 {
+				if config.Output == nil {
+					config.Output = &model.OutputSettings{}
+				}
+				config.Output.Filepath = langName
 			}
 			mrr.Languages[langName] = config
 		}

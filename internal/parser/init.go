@@ -73,15 +73,15 @@ func InitialSetup(scanDir string, detectedLang string, schemas []*model.Schema, 
 
 	for _, l := range chosenLangs {
 		config := model.LanguageConfig{
-			Filepath: basePath,
-			Format:   "pascal",
+			Output: &model.OutputSettings{
+				Filepath: basePath,
+				Format:   "pascal",
+			},
 		}
 		if l == "dart" {
-			config.Filepath = basePath
-			config.Format = "snake"
+			config.Output.Format = "snake"
 		} else if l == "go" {
-			config.Filepath = basePath
-			config.Format = "pascal"
+			config.Output.Format = "pascal"
 		}
 		mrr.Languages[l] = config
 	}

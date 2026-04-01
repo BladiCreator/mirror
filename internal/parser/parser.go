@@ -29,7 +29,7 @@ func parseFile(path string, visited map[string]bool, schemaOnly bool) (*model.Mi
 	ext := strings.ToLower(filepath.Ext(abs))
 	switch ext {
 	case ".yml", ".yaml":
-		return parseYAMLFile(abs, visited, schemaOnly)
+		return ParseYAMLFile(abs, visited, schemaOnly)
 	default:
 		return nil, fmt.Errorf("unsupported file extension %q for path %s (only .yml/.yaml allowed for config)", ext, abs)
 	}
@@ -56,8 +56,8 @@ func Validate(mrr *model.MirrorFile) error {
 	}
 
 	for langName, config := range mrr.Languages {
-		if !validFormats[config.Format] {
-			return fmt.Errorf("invalid format %q in language %s", config.Format, langName)
+		if !validFormats[config.GetFormat()] {
+			return fmt.Errorf("invalid format %q in language %s", config.GetFormat(), langName)
 		}
 	}
 

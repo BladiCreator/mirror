@@ -48,11 +48,13 @@ Define your schemas and targets in `mirror.yml`:
 ```yaml
 languages:
   - go:
-      filepath: "./internal/models"
-      format: pascal
+      output:
+        filepath: "./internal/models"
+        format: pascal
   - dart:
-      filepath: "./lib/models"
-      format: snake
+      output:
+        filepath: "./lib/models"
+        format: snake
 
 schemas:
   - name: User
