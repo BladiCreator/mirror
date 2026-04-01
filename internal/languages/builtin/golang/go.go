@@ -1,4 +1,4 @@
-package builtin
+package golang
 
 import (
 	"go/ast"
@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	lm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/languages/tools"
 	"github.com/BladiCreator/mirror/internal/model"
 	"github.com/BladiCreator/mirror/internal/template"
 	"github.com/bmatcuk/doublestar/v4"
@@ -45,7 +46,7 @@ func (p *GoLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig) (
 	}
 
 	// Filter fields based on meta.go.binding.omit
-	filteredSchemas := FilterFieldsByOmit("go", schemas)
+	filteredSchemas := tools.FilterFieldsByOmit("go", schemas)
 
 	extraFuncs := map[string]any{
 		"type": p.ResolveType,
@@ -83,7 +84,7 @@ func (p *GoLanguage) ResolveType(t string) string {
 }
 
 func GoTypeMapper(typeStr string) string {
-	base, override := ResolveTypeHelper("go", typeStr)
+	base, override := tools.ResolveTypeHelper("go", typeStr)
 	if override != "" {
 		return override
 	}

@@ -1,4 +1,4 @@
-package builtin
+package typescript
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	lm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/languages/tools"
 	"github.com/BladiCreator/mirror/internal/model"
 	"github.com/BladiCreator/mirror/internal/template"
 	"github.com/bmatcuk/doublestar/v4"
@@ -40,7 +41,7 @@ func (p *TypeScriptLanguage) Generate(schemas []*model.Schema, cfg model.OutputC
 	}
 
 	// Filter fields based on meta.typescript.binding.omit
-	filteredSchemas := FilterFieldsByOmit("typescript", schemas)
+	filteredSchemas := tools.FilterFieldsByOmit("typescript", schemas)
 
 	extraFuncs := map[string]any{
 		"type": p.ResolveType,
@@ -87,7 +88,7 @@ func (p *TypeScriptLanguage) ResolveType(t string) string {
 }
 
 func TypeScriptTypeMapper(typeStr string) string {
-	base, override := ResolveTypeHelper("typescript", typeStr)
+	base, override := tools.ResolveTypeHelper("typescript", typeStr)
 	if override != "" {
 		return override
 	}

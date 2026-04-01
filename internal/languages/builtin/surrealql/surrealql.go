@@ -1,4 +1,4 @@
-package builtin
+package surrealql
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	lm "github.com/BladiCreator/mirror/internal/languages/model"
+	"github.com/BladiCreator/mirror/internal/languages/tools"
 	"github.com/BladiCreator/mirror/internal/model"
 	"github.com/BladiCreator/mirror/internal/template"
 	"github.com/bmatcuk/doublestar/v4"
@@ -40,7 +41,7 @@ func (p *SurrealQLLanguage) Generate(schemas []*model.Schema, cfg model.OutputCo
 	}
 
 	// Filter fields based on meta.surrealql.binding.omit
-	filteredSchemas := FilterFieldsByOmit("surrealql", schemas)
+	filteredSchemas := tools.FilterFieldsByOmit("surrealql", schemas)
 
 	extraFuncs := map[string]any{
 		"type": p.ResolveType,
@@ -71,7 +72,7 @@ func (p *SurrealQLLanguage) ResolveType(t string) string {
 }
 
 func SurrealQLTypeMapper(typeStr string) string {
-	base, override := ResolveTypeHelper("surrealql", typeStr)
+	base, override := tools.ResolveTypeHelper("surrealql", typeStr)
 	if override != "" {
 		return override
 	}
