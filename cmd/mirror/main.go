@@ -182,9 +182,9 @@ func runInit(args []string) {
 	var sb strings.Builder
 	sb.WriteString("languages:\n")
 	for lang, cfg := range mrr.Languages {
-		sb.WriteString(fmt.Sprintf("  - %s:\n", lang))
-		sb.WriteString(fmt.Sprintf("      filepath: '%s'\n", cfg.Filepath))
-		sb.WriteString(fmt.Sprintf("      format: %s\n", cfg.Format))
+		fmt.Fprintf(&sb, "  - %s:\n", lang)
+		fmt.Fprintf(&sb, "      filepath: '%s'\n", cfg.Filepath)
+		fmt.Fprintf(&sb, "      format: %s\n", cfg.Format)
 	}
 	sb.WriteString("\nschemas:\n")
 
@@ -195,51 +195,103 @@ func runInit(args []string) {
 			os.Exit(1)
 		}
 
-		// Write schemas to mirror/schemas.yml
-		var schemasSb strings.Builder
-		for name, s := range mrr.Schemas {
-			schemasSb.WriteString(fmt.Sprintf("  - name: %s\n", name))
+		// Sort schema names for deterministic output
+		var schemaNames []string
+		for name := range mrr.Schemas {
+			schemaNames = append(schemaNames, name)
+		}
+		sort.Strings(schemaNames)
+
+		for _, name := range schemaNames {
+			s := mrr.Schemas[name]
+			var schemasSb strings.Builder
+			schemasSb.WriteString("schemas:\n")
+			fmt.Fprintf(&schemasSb, "  - name: %s\n", name)
+
+			if s.Binding != nil && len(s.Binding) > 0 {
+				schemasSb.WriteString("    binding:\n")
+				for _, b := range s.Binding {
+					fmt.Fprintf(&schemasSb, "      - %s\n", b)
+				}
+			}
+
 			if s.Meta != nil {
 				schemasSb.WriteString("    meta:\n")
 				for lang, meta := range s.Meta {
-					schemasSb.WriteString(fmt.Sprintf("      %s:\n", lang))
+					fmt.Fprintf(&schemasSb, "      %s:\n", lang)
 					for k, v := range meta {
-						schemasSb.WriteString(fmt.Sprintf("        %s: %v\n", k, v))
+						fmt.Fprintf(&schemasSb, "        %s: %v\n", k, v)
 					}
 				}
 			}
+
 			schemasSb.WriteString("    fields:\n")
 			for _, f := range s.Fields {
-				schemasSb.WriteString(fmt.Sprintf("      - name: %s\n", f.Name))
-				schemasSb.WriteString(fmt.Sprintf("        type: %s\n", f.Type))
+				fmt.Fprintf(&schemasSb, "      - name: %s\n", f.Name)
+				fmt.Fprintf(&schemasSb, "        type: %s\n", f.Type)
+				if f.Meta != nil {
+					schemasSb.WriteString("        meta:\n")
+					for lang, meta := range f.Meta {
+						fmt.Fprintf(&schemasSb, "          %s:\n", lang)
+						for k, v := range meta {
+							fmt.Fprintf(&schemasSb, "            %s: %v\n", k, v)
+						}
+					}
+				}
 			}
-			schemasSb.WriteString("\n")
-		}
 
-		if err := os.WriteFile("mirror/schemas.yml", []byte(schemasSb.String()), 0644); err != nil {
-			fmt.Println("Error writing mirror/schemas.yml:", err)
-			os.Exit(1)
-		}
+			fileName := fmt.Sprintf("mirror/%s.yml", name)
+			if err := os.WriteFile(fileName, []byte(schemasSb.String()), 0644); err != nil {
+				fmt.Printf("Error writing %s: %v\n", fileName, err)
+				os.Exit(1)
+			}
 
-		// Add include to main
-		sb.WriteString("  - include: mirror/schemas.yml\n")
+			// Add include to main
+			fmt.Fprintf(&sb, "  - include: %s\n", fileName)
+		}
 	} else {
 		// Write schemas directly
-		for name, s := range mrr.Schemas {
-			sb.WriteString(fmt.Sprintf("  - name: %s\n", name))
+		// Sort schema names for deterministic output
+		var schemaNames []string
+		for name := range mrr.Schemas {
+			schemaNames = append(schemaNames, name)
+		}
+		sort.Strings(schemaNames)
+
+		for _, name := range schemaNames {
+			s := mrr.Schemas[name]
+			fmt.Fprintf(&sb, "  - name: %s\n", name)
+
+			if s.Binding != nil && len(s.Binding) > 0 {
+				sb.WriteString("    binding:\n")
+				for _, b := range s.Binding {
+					fmt.Fprintf(&sb, "      - %s\n", b)
+				}
+			}
+
 			if s.Meta != nil {
 				sb.WriteString("    meta:\n")
 				for lang, meta := range s.Meta {
-					sb.WriteString(fmt.Sprintf("      %s:\n", lang))
+					fmt.Fprintf(&sb, "      %s:\n", lang)
 					for k, v := range meta {
-						sb.WriteString(fmt.Sprintf("        %s: %v\n", k, v))
+						fmt.Fprintf(&sb, "        %s: %v\n", k, v)
 					}
 				}
 			}
+
 			sb.WriteString("    fields:\n")
 			for _, f := range s.Fields {
-				sb.WriteString(fmt.Sprintf("      - name: %s\n", f.Name))
-				sb.WriteString(fmt.Sprintf("        type: %s\n", f.Type))
+				fmt.Fprintf(&sb, "      - name: %s\n", f.Name)
+				fmt.Fprintf(&sb, "        type: %s\n", f.Type)
+				if f.Meta != nil {
+					sb.WriteString("        meta:\n")
+					for lang, meta := range f.Meta {
+						fmt.Fprintf(&sb, "          %s:\n", lang)
+						for k, v := range meta {
+							fmt.Fprintf(&sb, "            %s: %v\n", k, v)
+						}
+					}
+				}
 			}
 			sb.WriteString("\n")
 		}
@@ -251,7 +303,7 @@ func runInit(args []string) {
 	}
 
 	if *splitSchemas {
-		fmt.Println("\nSuccessfully created mirror.yml and mirror/schemas.yml with extracted schemas.")
+		fmt.Println("\nSuccessfully created mirror.yml and individual schema files in mirror/ directory.")
 	} else {
 		fmt.Println("\nSuccessfully created mirror.yml with extracted schemas.")
 	}

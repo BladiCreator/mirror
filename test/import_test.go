@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/BladiCreator/mirror/internal/languages/builtin"
+	"github.com/BladiCreator/mirror/internal/languages/builtin/dart"
+	"github.com/BladiCreator/mirror/internal/languages/builtin/golang"
 	"github.com/BladiCreator/mirror/internal/model"
 )
 
@@ -30,10 +32,10 @@ func TestGenerationWithImports(t *testing.T) {
 	cfg := model.OutputConfig{Filepath: "./models", Format: "pascal"}
 
 	// Test Go generation
-	var goPlg *builtin.GoLanguage
+	var goPlg *golang.GoLanguage
 	for _, l := range langs {
 		if l.Name() == "go" {
-			goPlg = l.(*builtin.GoLanguage)
+			goPlg = l.(*golang.GoLanguage)
 		}
 	}
 
@@ -47,10 +49,10 @@ func TestGenerationWithImports(t *testing.T) {
 	}
 
 	// Test Dart generation
-	var dartPlg *builtin.DartLanguage
+	var dartPlg *dart.DartLanguage
 	for _, l := range langs {
 		if l.Name() == "dart" {
-			dartPlg = l.(*builtin.DartLanguage)
+			dartPlg = l.(*dart.DartLanguage)
 		}
 	}
 
