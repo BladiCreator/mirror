@@ -19,7 +19,8 @@ type DartLanguage struct {
 	Engine *template.Engine
 }
 
-func (p *DartLanguage) Name() string { return "dart" }
+func (p *DartLanguage) Name() string      { return "dart" }
+func (p *DartLanguage) Aliases() []string { return nil }
 
 const defaultDartTemplate = `{{ range imports . }}{{ . }}
 {{ end }}

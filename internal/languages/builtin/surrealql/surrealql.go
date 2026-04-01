@@ -17,7 +17,8 @@ type SurrealQLLanguage struct {
 	Engine *template.Engine
 }
 
-func (p *SurrealQLLanguage) Name() string { return "surrealql" }
+func (p *SurrealQLLanguage) Name() string      { return "surrealql" }
+func (p *SurrealQLLanguage) Aliases() []string { return []string{"surrql"} }
 
 const defaultSurrealQLTemplate = `DEFINE TABLE {{ .Name }} SCHEMAFULL;
 {{ range $_, $field := .Fields }}

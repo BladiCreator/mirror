@@ -20,7 +20,8 @@ type GoLanguage struct {
 	Engine *template.Engine
 }
 
-func (p *GoLanguage) Name() string { return "go" }
+func (p *GoLanguage) Name() string      { return "go" }
+func (p *GoLanguage) Aliases() []string { return []string{"golang"} }
 
 const defaultGoTemplate = `package {{ filepath_Base input.Config.Filepath }}
 {{ with imports . }}

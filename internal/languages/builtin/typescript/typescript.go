@@ -19,7 +19,8 @@ type TypeScriptLanguage struct {
 	Engine *template.Engine
 }
 
-func (p *TypeScriptLanguage) Name() string { return "typescript" }
+func (p *TypeScriptLanguage) Name() string      { return "typescript" }
+func (p *TypeScriptLanguage) Aliases() []string { return []string{"ts"} }
 
 const defaultTypeScriptTemplate = `{{ with imports . }}{{ range . }}{{ . }}
 {{ end }}{{ end }}

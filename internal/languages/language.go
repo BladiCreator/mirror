@@ -22,6 +22,9 @@ func NewRegistry(languagesDir string) *Registry {
 	reg := &Registry{internal: map[string]pm.Language{}, languageDir: languagesDir}
 	for _, l := range builtin.InternalLanguage() {
 		reg.internal[l.Name()] = l
+		for _, alias := range l.Aliases() {
+			reg.internal[alias] = l
+		}
 	}
 	return reg
 }
@@ -60,14 +63,22 @@ func execLookPath(name string) (string, error) {
 // SetInternal adds or replaces an internal language (for tests).
 func (r *Registry) SetInternal(p pm.Language) {
 	r.internal[p.Name()] = p
+	for _, alias := range p.Aliases() {
+		r.internal[alias] = p
+	}
 }
 
 // Analyzers returns all available analyzers from internal languages.
 func (r *Registry) Analyzers() map[string]pm.Analyzer {
 	res := make(map[string]pm.Analyzer)
-	for name, lang := range r.internal {
+	seen := make(map[pm.Language]bool)
+	for _, lang := range r.internal {
+		if seen[lang] {
+			continue
+		}
+		seen[lang] = true
 		if a := lang.Analyzer(); a != nil {
-			res[name] = a
+			res[lang.Name()] = a
 		}
 	}
 	return res

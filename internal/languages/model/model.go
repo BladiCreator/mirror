@@ -14,6 +14,7 @@ import (
 // Language defines generation behavior.
 type Language interface {
 	Name() string
+	Aliases() []string
 	Generate(schemas []*model.Schema, cfg model.OutputConfig) ([]model.GeneratedFile, error)
 	ResolveType(typeStr string) string
 	Analyzer() Analyzer
@@ -28,15 +29,17 @@ type Analyzer interface {
 
 // ExternalLanguage executes an external binary plugin via JSON stdin/stdout.
 type ExternalLanguage struct {
-	name string
-	path string
+	name    string
+	aliases []string
+	path    string
 }
 
 func NewExternalLanguage(name string, path string) Language {
 	return &ExternalLanguage{name: name, path: path}
 }
 
-func (p *ExternalLanguage) Name() string { return p.name }
+func (p *ExternalLanguage) Name() string      { return p.name }
+func (p *ExternalLanguage) Aliases() []string { return p.aliases }
 
 func (p *ExternalLanguage) Generate(schemas []*model.Schema, cfg model.OutputConfig) ([]model.GeneratedFile, error) {
 	in := struct {
